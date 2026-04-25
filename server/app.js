@@ -1,16 +1,25 @@
 import express from "express";
 import cors from "cors";
-import "./db.js"; // 🔥 this connects DB
-
+import "./db.js";
+import authRoutes from "./routers/authRoutes.js";
+import donationRoutes from "./routers/donationRoutes.js";
 const app = express();
 
 app.use(cors());
 app.use(express.json());
 
 app.get("/", (req, res) => {
-  res.send("AWT Backend is running");
+  res.send("AWT Backend API is running");
 });
 
-app.listen(5000, () => {
-  console.log("Server running on port 5000");
+app.post("/test", (req, res) => {
+  res.json({ message: "Server is working!" });
+});
+
+app.use("/api/auth", authRoutes);
+app.use("/api/donations", donationRoutes);
+
+const PORT = 5000;
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
 });

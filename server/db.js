@@ -1,9 +1,9 @@
 import mysql from "mysql2";
 
-export const db = mysql.createConnection({
+const db = mysql.createConnection({
   host: "localhost",
   user: "root",
-  password: "crackz0795",
+  password: "Habib3004.",
   database: "AWTDB",
 });
 
@@ -14,3 +14,5 @@ db.connect((err) => {
     console.log("DB connected");
   }
 });
+
+export default db;
