@@ -18,7 +18,8 @@ export default function Login({ onNavigateToRegister }: LoginProps) {
     setLoading(true);
     setMessage("");
 
-    try {
+    try { 
+
       const res = await fetch("http://localhost:5000/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },

@@ -1,0 +1,279 @@
+/* ── DonationForm.css ─────────────────────────────────────────────────── */
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+/* Page */
+.page-wrapper {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #dde5dc;
+    padding: 2rem 1rem;
+    font-family: 'Georgia', serif;
+}
+
+/* Card */
+.card {
+    background-color: #f5f7f3;
+    border-radius: 24px;
+    padding: 40px 36px;
+    width: 100%;
+    max-width: 440px;
+    box-shadow: 0 4px 32px rgba(0, 0, 0, 0.09);
+}
+
+/* ── Header ───────────────────────────────────────────────────────────── */
+.header {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-bottom: 28px;
+}
+
+.logo {
+    width: 52px;
+    height: 52px;
+    background-color: #3a5a40;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 14px;
+}
+
+.logo-letter {
+    color: #f5f7f3;
+    font-size: 22px;
+    font-weight: 700;
+    font-family: 'Georgia', serif;
+}
+
+.brand-name {
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.18em;
+    color: #3a5a40;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+}
+
+.heading {
+    font-size: 20px;
+    color: #2c3e2c;
+    font-weight: 400;
+    text-align: center;
+    line-height: 1.4;
+}
+
+.heading span {
+    display: block;
+    font-size: 14px;
+    color: #7a9478;
+    font-weight: 400;
+    margin-top: 4px;
+}
+
+/* ── Form ─────────────────────────────────────────────────────────────── */
+.form {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+/* Field label */
+.field-label {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: #7a9478;
+    padding-left: 4px;
+    margin-bottom: -6px;
+}
+
+/* Input group */
+.input-group {
+    display: flex;
+    align-items: center;
+    background-color: #eaefe8;
+    border-radius: 12px;
+    padding: 0 14px;
+    border: 1.5px solid transparent;
+    transition: border-color 0.2s;
+}
+
+.input-group:focus-within {
+    border-color: #3a5a40;
+}
+
+.input-icon {
+    font-size: 15px;
+    margin-right: 10px;
+    color: #7a9478;
+    flex-shrink: 0;
+}
+
+.input-group input,
+.input-group select {
+    background: transparent;
+    border: none;
+    outline: none;
+    width: 100%;
+    padding: 13px 0;
+    font-size: 14px;
+    color: #2c3e2c;
+    font-family: 'Georgia', serif;
+}
+
+.input-group input::placeholder {
+    color: #9db09a;
+}
+
+/* Select arrow */
+.select-wrapper {
+    position: relative;
+    width: 100%;
+}
+
+.select-wrapper::after {
+    content: '▾';
+    position: absolute;
+    right: 2px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #7a9478;
+    pointer-events: none;
+    font-size: 13px;
+}
+
+.select-wrapper select {
+    appearance: none;
+    -webkit-appearance: none;
+    cursor: pointer;
+}
+
+/* Amount presets */
+.amount-presets {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+}
+
+.preset-btn {
+    background-color: #eaefe8;
+    border: 1.5px solid transparent;
+    border-radius: 10px;
+    padding: 10px 0;
+    font-size: 13px;
+    color: #3a5a40;
+    cursor: pointer;
+    font-family: 'Georgia', serif;
+    font-weight: 600;
+    transition: all 0.2s;
+}
+
+.preset-btn:hover {
+    border-color: #3a5a40;
+}
+
+.preset-btn.active {
+    background-color: #3a5a40;
+    color: #f5f7f3;
+    border-color: #3a5a40;
+}
+
+/* ── Sub-form (Books / Clothes) ───────────────────────────────────────── */
+.sub-form-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    animation: slideDown 0.25s ease;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-8px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.sub-form-divider {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 2px 0;
+}
+
+.sub-form-divider hr {
+    flex: 1;
+    border: none;
+    border-top: 1px solid #c9d4c7;
+}
+
+.sub-form-divider span {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: #7a9478;
+    white-space: nowrap;
+}
+
+/* The sub-form component itself inherits the card's gap via flex */
+.sub-form-body {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+/* ── Feedback ─────────────────────────────────────────────────────────── */
+.feedback {
+    font-size: 13px;
+    padding: 10px 14px;
+    border-radius: 10px;
+    text-align: center;
+}
+
+.error-msg {
+    color: #8b2020;
+    background-color: #fdecea;
+}
+
+.success-msg {
+    color: #1f6e3a;
+    background-color: #e6f4ec;
+}
+
+/* ── Submit ───────────────────────────────────────────────────────────── */
+.submit-btn {
+    background-color: #3a5a40;
+    color: #f5f7f3;
+    border: none;
+    border-radius: 12px;
+    padding: 15px;
+    font-size: 15px;
+    font-family: 'Georgia', serif;
+    font-weight: 600;
+    cursor: pointer;
+    letter-spacing: 0.03em;
+    transition: background-color 0.2s, opacity 0.2s;
+    margin-top: 4px;
+}
+
+.submit-btn:hover:not(:disabled) {
+    background-color: #2c4530;
+}
+
+.submit-btn:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
