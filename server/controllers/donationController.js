@@ -11,7 +11,7 @@ const getNextId = async (table, idColumn) => {
 
 // @desc    Create a donation
 // @route   POST /api/donations/create
-// @access  Private (donor only)
+// @access  Private
 export const createDonation = async (req, res) => {
   try {
     const { donation_type_id, amount, campaign_id, items } = req.body;
@@ -23,12 +23,10 @@ export const createDonation = async (req, res) => {
       "SELECT * FROM Donation_Type WHERE donation_type_id = ?",
       [donation_type_id],
     );
-
     if (typeCheck.length === 0) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid donation type",
-      });
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid donation type" });
     }
 
     // Get next donation_id
@@ -47,35 +45,40 @@ export const createDonation = async (req, res) => {
       ],
     );
 
-    // Handle items if it's clothes or books
+    // Handle clothes or books items (direct insert into Clothes/Books)
     if (items && items.length > 0) {
       for (const item of items) {
-        const item_id = await getNextId("Donation_Item", "item_id");
-
-        // Insert into Donation_Item
-        await promiseDb.query(
-          `INSERT INTO Donation_Item (item_id, donation_id, description, quantity) 
-                     VALUES (?, ?, ?, ?)`,
-          [item_id, donation_id, item.description, item.quantity],
-        );
-
-        // If clothes, insert into Clothes table
         if (donation_type_id === 4) {
-          // Assuming 4 = clothes
+          // Clothes
+          const cloth_id = await getNextId("Clothes", "cloth_id");
           await promiseDb.query(
-            `INSERT INTO Clothes (item_id, type, size, conditionOfCloth) 
-                         VALUES (?, ?, ?, ?)`,
-            [item_id, item.type, item.size, item.conditionOfCloth],
+            `INSERT INTO Clothes (cloth_id, donation_id, type, size, conditionOfCloth, description, quantity)
+                         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+            [
+              cloth_id,
+              donation_id,
+              item.type,
+              item.size,
+              item.conditionOfCloth,
+              item.description,
+              item.quantity,
+            ],
           );
-        }
-
-        // If books, insert into Books table
-        if (donation_type_id === 5) {
-          // Assuming 5 = books
+        } else if (donation_type_id === 5) {
+          // Books
+          const book_id = await getNextId("Books", "book_id");
           await promiseDb.query(
-            `INSERT INTO Books (item_id, title, author, category) 
-                         VALUES (?, ?, ?, ?)`,
-            [item_id, item.title, item.author, item.category],
+            `INSERT INTO Books (book_id, donation_id, title, author, conditionOfBook, description, quantity)
+                         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+            [
+              book_id,
+              donation_id,
+              item.title,
+              item.author,
+              item.conditionOfBook,
+              item.description,
+              item.quantity,
+            ],
           );
         }
       }
@@ -95,7 +98,7 @@ export const createDonation = async (req, res) => {
 
 // @desc    Get donor's own donation history
 // @route   GET /api/donations/my-donations
-// @access  Private (donor only)
+// @access  Private
 export const getMyDonations = async (req, res) => {
   try {
     const user_id = req.user.user_id;
@@ -128,27 +131,24 @@ export const getTotalDonations = async (req, res) => {
   try {
     const promiseDb = db.promise();
 
-    // Total money donations
     const [moneyResult] = await promiseDb.query(
       `SELECT SUM(amount) as total_amount 
              FROM Donation 
-             WHERE donation_type_id IN (1, 2, 3) AND status = 'approved'`,
+             WHERE donation_type_id IN (1,2,3) AND status = 'approved'`,
     );
 
-    // Total clothes donations count
     const [clothesResult] = await promiseDb.query(
-      `SELECT SUM(di.quantity) as total_items 
-             FROM Donation d
-             JOIN Donation_Item di ON d.donation_id = di.donation_id
-             WHERE d.donation_type_id = 4 AND d.status = 'approved'`,
+      `SELECT SUM(quantity) as total_items 
+             FROM Clothes c
+             JOIN Donation d ON c.donation_id = d.donation_id
+             WHERE d.status = 'approved'`,
     );
 
-    // Total books donations count
     const [booksResult] = await promiseDb.query(
-      `SELECT SUM(di.quantity) as total_items 
-             FROM Donation d
-             JOIN Donation_Item di ON d.donation_id = di.donation_id
-             WHERE d.donation_type_id = 5 AND d.status = 'approved'`,
+      `SELECT SUM(quantity) as total_items 
+             FROM Books b
+             JOIN Donation d ON b.donation_id = d.donation_id
+             WHERE d.status = 'approved'`,
     );
 
     res.json({
@@ -167,7 +167,7 @@ export const getTotalDonations = async (req, res) => {
 
 // @desc    Track individual donation record
 // @route   GET /api/donations/:id
-// @access  Private (donor can see their own, admin can see all)
+// @access  Private (owner or admin)
 export const getDonationById = async (req, res) => {
   try {
     const donation_id = req.params.id;
@@ -183,52 +183,38 @@ export const getDonationById = async (req, res) => {
             WHERE d.donation_id = ?
         `;
 
-    // If not admin, only show their own donations
     if (user_role !== "admin") {
       query += ` AND d.user_id = ?`;
       const [donations] = await promiseDb.query(query, [donation_id, user_id]);
-
       if (donations.length === 0) {
         return res
           .status(404)
           .json({ success: false, message: "Donation not found" });
       }
-
-      // Get items if clothes/books
       let items = [];
-      if (
-        donations[0].donation_type_id === 4 ||
-        donations[0].donation_type_id === 5
-      ) {
-        const [itemRows] = await promiseDb.query(
-          `SELECT di.item_id, di.description, di.quantity
-                     FROM Donation_Item di
-                     WHERE di.donation_id = ?`,
+      if (donations[0].donation_type_id === 4) {
+        const [clothes] = await promiseDb.query(
+          "SELECT * FROM Clothes WHERE donation_id = ?",
           [donation_id],
         );
-        items = itemRows;
+        items = clothes;
+      } else if (donations[0].donation_type_id === 5) {
+        const [books] = await promiseDb.query(
+          "SELECT * FROM Books WHERE donation_id = ?",
+          [donation_id],
+        );
+        items = books;
       }
-
-      return res.json({
-        success: true,
-        donation: donations[0],
-        items: items,
-      });
+      return res.json({ success: true, donation: donations[0], items });
     }
 
-    // Admin can see any donation
     const [donations] = await promiseDb.query(query, [donation_id]);
-
     if (donations.length === 0) {
       return res
         .status(404)
         .json({ success: false, message: "Donation not found" });
     }
-
-    res.json({
-      success: true,
-      donation: donations[0],
-    });
+    res.json({ success: true, donation: donations[0] });
   } catch (error) {
     console.error(error);
     res.status(500).json({ success: false, message: "Server error" });

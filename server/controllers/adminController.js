@@ -244,6 +244,34 @@ export const createDistribution = async (req, res) => {
         message: "Approved donation not found",
       });
     }
+    // Check available quantity for clothes/books
+    let availableQty = null;
+    const donationTypeId = donation[0].donation_type_id;
+
+    if (donationTypeId === 4) {
+      // Clothes
+      const [clothes] = await promiseDb.query(
+        "SELECT SUM(quantity) as total FROM Clothes WHERE donation_id = ?",
+        [donation_id],
+      );
+      availableQty = clothes[0].total || 0;
+    } else if (donationTypeId === 5) {
+      // Books
+      const [books] = await promiseDb.query(
+        "SELECT SUM(quantity) as total FROM Books WHERE donation_id = ?",
+        [donation_id],
+      );
+      availableQty = books[0].total || 0;
+    } else {
+      availableQty = donation[0].amount || 0;
+    }
+
+    if (quantity > availableQty) {
+      return res.status(400).json({
+        success: false,
+        message: `Requested quantity (${quantity}) exceeds available (${availableQty})`,
+      });
+    }
 
     // Get next distribution_id
     const [maxId] = await promiseDb.query(

@@ -1,11 +1,11 @@
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import db from "../db.js"; // This will now work
-import dotenv from "dotenv";
+// import dotenv from "dotenv";
 
-dotenv.config();
-const JWT_SECRET = process.env.JWT_SECRET;
-
+// dotenv.config();
+const JWT_SECRET = "my_secret_key_2026";
+// console.log("JWT_SECRET from env:", process.env.JWT_SECRET);
 // Since you're using createConnection (not pool), we need to use promise wrapper
 // Or use db.promise() for async/await
 
