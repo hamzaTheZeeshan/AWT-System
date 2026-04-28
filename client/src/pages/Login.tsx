@@ -18,7 +18,7 @@ export default function Login({ onNavigateToRegister }: LoginProps) {
     setLoading(true);
     setMessage("");
 
-    try { 
+    try {
 
       const res = await fetch("http://localhost:5000/api/auth/login", {
         method: "POST",
@@ -29,8 +29,8 @@ export default function Login({ onNavigateToRegister }: LoginProps) {
       const data = await res.json();
 
       if (data.success) {
-        localStorage.setItem("token", data.token);
-        localStorage.setItem("user", JSON.stringify(data.user));
+        sessionStorage.setItem("token", data.token);
+        sessionStorage.setItem("user", JSON.stringify(data.user));
         setIsError(false);
         setMessage("Login successful!");
       } else {

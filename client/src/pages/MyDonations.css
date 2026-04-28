@@ -1,0 +1,328 @@
+/* ── MyDonations.css ── AWT System Theme ──────────────────────────── */
+
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600&family=DM+Sans:wght@300;400;500&display=swap');
+
+:root {
+  --green-dark:   #2D4A3E;
+  --green-mid:    #3a5f51;
+  --green-light:  #e8f0ec;
+  --cream:        #f0ede6;
+  --cream-border: #ddd8cc;
+  --text-dark:    #1a2e26;
+  --text-mid:     #4a6358;
+  --text-soft:    #8a9e96;
+  --approved:     #2D4A3E;
+  --approved-bg:  #d6e8de;
+  --pending:      #7a5c1e;
+  --pending-bg:   #fdf0d0;
+  --rejected:     #7a2a2a;
+  --rejected-bg:  #fddede;
+  --radius:       14px;
+  --shadow:       0 2px 16px rgba(45,74,62,0.09);
+}
+
+/* Wrapper */
+.md-wrapper {
+  font-family: 'DM Sans', sans-serif;
+  background: var(--cream);
+  min-height: 100vh;
+  padding: 40px 20px 60px;
+  max-width: 720px;
+  margin: 0 auto;
+  color: var(--text-dark);
+}
+
+/* ── Header ─────────────────────────────────────────────────────────── */
+.md-header {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  margin-bottom: 32px;
+}
+
+.md-header-icon {
+  width: 54px;
+  height: 54px;
+  background: var(--green-dark);
+  color: #fff;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Playfair Display', serif;
+  font-size: 22px;
+  font-weight: 600;
+  flex-shrink: 0;
+  box-shadow: 0 4px 14px rgba(45,74,62,0.25);
+}
+
+.md-header-label {
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  color: var(--text-soft);
+  text-transform: uppercase;
+  margin: 0 0 2px;
+}
+
+.md-header-title {
+  font-family: 'Playfair Display', serif;
+  font-size: 26px;
+  font-weight: 600;
+  color: var(--text-dark);
+  margin: 0 0 2px;
+  line-height: 1.1;
+}
+
+.md-header-sub {
+  font-size: 13px;
+  color: var(--text-soft);
+  margin: 0;
+}
+
+/* ── Stats ───────────────────────────────────────────────────────────── */
+.md-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-bottom: 28px;
+}
+
+@media (max-width: 560px) {
+  .md-stats {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.md-stat-card {
+  background: #fff;
+  border: 1px solid var(--cream-border);
+  border-radius: var(--radius);
+  padding: 16px 14px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  box-shadow: var(--shadow);
+}
+
+.md-stat-value {
+  font-family: 'Playfair Display', serif;
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--green-dark);
+  line-height: 1;
+}
+
+.md-stat-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-soft);
+}
+
+.md-stat-approved .md-stat-value { color: var(--approved); }
+.md-stat-pending  .md-stat-value { color: var(--pending);  }
+.md-stat-money    .md-stat-value { font-size: 15px; }
+
+/* ── Filters ─────────────────────────────────────────────────────────── */
+.md-filters {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.md-filter-btn {
+  padding: 7px 18px;
+  border-radius: 999px;
+  border: 1.5px solid var(--cream-border);
+  background: #fff;
+  color: var(--text-mid);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+
+.md-filter-btn:hover {
+  border-color: var(--green-dark);
+  color: var(--green-dark);
+}
+
+.md-filter-active {
+  background: var(--green-dark) !important;
+  border-color: var(--green-dark) !important;
+  color: #fff !important;
+}
+
+/* ── Donation List ────────────────────────────────────────────────────── */
+.md-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.md-card {
+  background: #fff;
+  border: 1px solid var(--cream-border);
+  border-radius: var(--radius);
+  padding: 16px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: var(--shadow);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.md-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 22px rgba(45,74,62,0.13);
+}
+
+.md-card-left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.md-card-icon {
+  font-size: 26px;
+  width: 46px;
+  height: 46px;
+  background: var(--green-light);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.md-card-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.md-card-type {
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--text-dark);
+}
+
+.md-card-date {
+  font-size: 12px;
+  color: var(--text-soft);
+}
+
+.md-card-campaign {
+  font-size: 11px;
+  color: var(--green-mid);
+  background: var(--green-light);
+  padding: 1px 8px;
+  border-radius: 999px;
+  width: fit-content;
+}
+
+.md-card-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 5px;
+}
+
+.md-card-amount {
+  font-family: 'Playfair Display', serif;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--green-dark);
+}
+
+.md-card-id {
+  font-size: 11px;
+  color: var(--text-soft);
+}
+
+/* ── Badges ──────────────────────────────────────────────────────────── */
+.md-badge {
+  font-size: 11px;
+  font-weight: 500;
+  padding: 3px 10px;
+  border-radius: 999px;
+  text-transform: capitalize;
+  letter-spacing: 0.03em;
+}
+
+.md-badge-approved {
+  background: var(--approved-bg);
+  color: var(--approved);
+}
+
+.md-badge-pending {
+  background: var(--pending-bg);
+  color: var(--pending);
+}
+
+.md-badge-rejected {
+  background: var(--rejected-bg);
+  color: var(--rejected);
+}
+
+/* ── States ──────────────────────────────────────────────────────────── */
+.md-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  padding: 60px 0;
+  color: var(--text-soft);
+  font-size: 14px;
+}
+
+.md-spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid var(--cream-border);
+  border-top-color: var(--green-dark);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.md-error {
+  text-align: center;
+  padding: 48px 20px;
+  color: var(--rejected);
+  font-size: 14px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.md-error span { font-size: 28px; }
+
+.md-empty {
+  text-align: center;
+  padding: 60px 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.md-empty-icon { font-size: 40px; }
+
+.md-empty p {
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--text-dark);
+  margin: 0;
+}
+
+.md-empty small {
+  font-size: 13px;
+  color: var(--text-soft);
+}

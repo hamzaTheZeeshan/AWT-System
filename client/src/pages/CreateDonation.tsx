@@ -78,7 +78,7 @@ const DonationForm: React.FC = () => {
 
         try {
             setLoading(true);
-            const token = localStorage.getItem("token");
+            const token = sessionStorage.getItem("token");
 
             if (!token) {
                 setError("You must be logged in to donate.");
