@@ -1,6 +1,6 @@
 import React, { useState } from "react";
-import "./DonationForm.css";
-import Login from "./Login";
+import "./CreateDonation.css";
+import Login from "../Login/Login";
 
 interface DonationPayload {
     donation_type_id: number;
@@ -78,7 +78,7 @@ const DonationForm: React.FC = () => {
 
         try {
             setLoading(true);
-            const token = sessionStorage.getItem("token");
+            const token = localStorage.getItem("token");
 
             if (!token) {
                 setError("You must be logged in to donate.");
@@ -177,7 +177,7 @@ const DonationForm: React.FC = () => {
                         <div className="sub-form-wrapper">
                             <div className="sub-form-divider">
                                 <hr />
-                                <span>Details</span>
+                                <span>Details</span>–
                                 <hr />
                             </div>
                             <div className="sub-form-body">

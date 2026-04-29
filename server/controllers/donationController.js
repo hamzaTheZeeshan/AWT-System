@@ -131,33 +131,36 @@ export const getTotalDonations = async (req, res) => {
   try {
     const promiseDb = db.promise();
 
-    const [moneyResult] = await promiseDb.query(
-      `SELECT SUM(amount) as total_amount 
-             FROM Donation 
-             WHERE donation_type_id IN (1,2,3) AND status = 'approved'`,
+    const [perTypeResult] = await promiseDb.query(
+      `SELECT dt.type_name, 
+          COALESCE(SUM(d.amount), 0) as total_amount
+       FROM Donation_Type dt
+       LEFT JOIN Donation d ON dt.donation_type_id = d.donation_type_id 
+         AND d.status = 'approved'
+       GROUP BY dt.donation_type_id, dt.type_name`
     );
 
     const [clothesResult] = await promiseDb.query(
       `SELECT SUM(quantity) as total_items 
-             FROM Clothes c
-             JOIN Donation d ON c.donation_id = d.donation_id
-             WHERE d.status = 'approved'`,
+       FROM Clothes c
+       JOIN Donation d ON c.donation_id = d.donation_id
+       WHERE d.status = 'approved'`
     );
 
     const [booksResult] = await promiseDb.query(
       `SELECT SUM(quantity) as total_items 
-             FROM Books b
-             JOIN Donation d ON b.donation_id = d.donation_id
-             WHERE d.status = 'approved'`,
+       FROM Books b
+       JOIN Donation d ON b.donation_id = d.donation_id
+       WHERE d.status = 'approved'`
     );
 
     res.json({
       success: true,
       totals: {
-        total_money: moneyResult[0].total_amount || 0,
         total_clothes_items: clothesResult[0].total_items || 0,
         total_books_items: booksResult[0].total_items || 0,
       },
+      perType: perTypeResult,
     });
   } catch (error) {
     console.error(error);

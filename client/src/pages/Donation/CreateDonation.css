@@ -14,7 +14,7 @@
     justify-content: center;
     background-color: #dde5dc;
     padding: 2rem 1rem;
-    font-family: 'Georgia', serif;
+    font-family: 'DM Sans', sans-serif;
 }
 
 /* Card */
@@ -50,7 +50,7 @@
     color: #f5f7f3;
     font-size: 22px;
     font-weight: 700;
-    font-family: 'Georgia', serif;
+    font-family: 'DM Sans', sans-serif;
 }
 
 .brand-name {
@@ -127,7 +127,7 @@
     padding: 13px 0;
     font-size: 14px;
     color: #2c3e2c;
-    font-family: 'Georgia', serif;
+    font-family: 'DM Sans', sans-serif;
 }
 
 .input-group input::placeholder {
@@ -172,7 +172,7 @@
     font-size: 13px;
     color: #3a5a40;
     cursor: pointer;
-    font-family: 'Georgia', serif;
+    font-family: 'DM Sans', sans-serif;
     font-weight: 600;
     transition: all 0.2s;
 }
@@ -261,7 +261,7 @@
     border-radius: 12px;
     padding: 15px;
     font-size: 15px;
-    font-family: 'Georgia', serif;
+    font-family: 'DM Sans', sans-serif;
     font-weight: 600;
     cursor: pointer;
     letter-spacing: 0.03em;

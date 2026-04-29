@@ -35,7 +35,7 @@ const formatDate = (dateStr: string) => {
 
 const formatAmount = (amount: number | null, typeName: string) => {
   if (amount !== null && amount !== undefined) {
-    return `PKR ${amount.toLocaleString()}`;
+    return `PKR ${Number(amount).toLocaleString()}`;  // ← add Number()
   }
   return typeName === "Clothes" ? "Items" : typeName === "Books" ? "Books" : "—";
 };
@@ -74,7 +74,7 @@ const MyDonations: React.FC = () => {
 
   const totalApproved = donations
     .filter((d) => d.status === "approved" && d.amount)
-    .reduce((sum, d) => sum + (d.amount || 0), 0);
+    .reduce((sum, d) => sum + (Number(d.amount) || 0), 0);
 
   const approvedCount = donations.filter((d) => d.status === "approved").length;
   const pendingCount = donations.filter((d) => d.status === "pending").length;
