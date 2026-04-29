@@ -37,11 +37,11 @@ export const register = async (req, res) => {
 
     await promiseDb.query(
       "INSERT INTO Users (user_id, name, email, password, phone, role) VALUES (?, ?, ?, ?, ?, ?)",
-      [user_id, name, email, hashedPassword, phone || null, role || "donor"],
+      [user_id, name, email, hashedPassword, phone || null, role || "general"],
     );
 
     const token = jwt.sign(
-      { user_id, email, role: role || "donor" },
+      { user_id, email, role: role || "general" },
       JWT_SECRET,
       { expiresIn: "7d" },
     );

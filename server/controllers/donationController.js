@@ -18,7 +18,7 @@ export const createDonation = async (req, res) => {
     const user_id = req.user.user_id;
     const promiseDb = db.promise();
 
-    // Validate donation type exists
+    // --- 1. Validate donation type exists ---
     const [typeCheck] = await promiseDb.query(
       "SELECT * FROM Donation_Type WHERE donation_type_id = ?",
       [donation_type_id],
@@ -29,10 +29,67 @@ export const createDonation = async (req, res) => {
         .json({ success: false, message: "Invalid donation type" });
     }
 
-    // Get next donation_id
+    // --- 2. Type‑data mismatch validation ---
+    const isMoneyType = [1, 2, 3].includes(donation_type_id);
+    const isClothes = donation_type_id === 4;
+    const isBooks = donation_type_id === 5;
+
+    if (isMoneyType) {
+      // Money/Zakat/Sadaqah must NOT have items
+      if (items && items.length > 0) {
+        return res.status(400).json({
+          success: false,
+          message:
+            'Money/Zakat/Sadaqah donations cannot have items. Use "amount" instead.',
+        });
+      }
+      // Must have a positive amount
+      if (!amount || amount <= 0) {
+        return res.status(400).json({
+          success: false,
+          message:
+            "Amount is required and must be greater than 0 for Money/Zakat/Sadaqah donations.",
+        });
+      }
+    }
+
+    if (isClothes || isBooks) {
+      // Clothes/Books must have items array
+      if (!items || items.length === 0) {
+        return res.status(400).json({
+          success: false,
+          message: "Items array is required for Clothes/Books donations.",
+        });
+      }
+      // Should NOT have amount
+      if (amount && amount > 0) {
+        return res.status(400).json({
+          success: false,
+          message:
+            'Amount should not be provided for Clothes/Books donations. Use "items" instead.',
+        });
+      }
+      // Validate each item has required fields
+      for (const item of items) {
+        if (isClothes && (!item.type || !item.quantity || item.quantity <= 0)) {
+          return res.status(400).json({
+            success: false,
+            message: "Each clothing item must have type and positive quantity.",
+          });
+        }
+        if (isBooks && (!item.title || !item.quantity || item.quantity <= 0)) {
+          return res.status(400).json({
+            success: false,
+            message: "Each book item must have title and positive quantity.",
+          });
+        }
+      }
+    }
+
+    // --- 3. Get next donation_id ---
     const donation_id = await getNextId("Donation", "donation_id");
 
-    // Insert into Donation table
+    // --- 4. Insert into Donation table ---
     await promiseDb.query(
       `INSERT INTO Donation (donation_id, user_id, campaign_id, donation_type_id, date, amount, status) 
              VALUES (?, ?, ?, ?, CURDATE(), ?, 'pending')`,
@@ -45,11 +102,10 @@ export const createDonation = async (req, res) => {
       ],
     );
 
-    // Handle clothes or books items (direct insert into Clothes/Books)
+    // --- 5. Insert items into Clothes or Books ---
     if (items && items.length > 0) {
       for (const item of items) {
-        if (donation_type_id === 4) {
-          // Clothes
+        if (isClothes) {
           const cloth_id = await getNextId("Clothes", "cloth_id");
           await promiseDb.query(
             `INSERT INTO Clothes (cloth_id, donation_id, type, size, conditionOfCloth, description, quantity)
@@ -58,14 +114,13 @@ export const createDonation = async (req, res) => {
               cloth_id,
               donation_id,
               item.type,
-              item.size,
-              item.conditionOfCloth,
-              item.description,
+              item.size || null,
+              item.conditionOfCloth || null,
+              item.description || null,
               item.quantity,
             ],
           );
-        } else if (donation_type_id === 5) {
-          // Books
+        } else if (isBooks) {
           const book_id = await getNextId("Books", "book_id");
           await promiseDb.query(
             `INSERT INTO Books (book_id, donation_id, title, author, conditionOfBook, description, quantity)
@@ -74,9 +129,9 @@ export const createDonation = async (req, res) => {
               book_id,
               donation_id,
               item.title,
-              item.author,
-              item.conditionOfBook,
-              item.description,
+              item.author || null,
+              item.conditionOfBook || null,
+              item.description || null,
               item.quantity,
             ],
           );
@@ -84,6 +139,36 @@ export const createDonation = async (req, res) => {
       }
     }
 
+    // --- 6. Upgrade role from 'general' to 'donor' if this is the user's first donation ---
+    // Get current role from the database (more reliable than the token)
+    const [userRows] = await promiseDb.query(
+      "SELECT role FROM Users WHERE user_id = ?",
+      [user_id],
+    );
+    const currentDbRole = userRows[0]?.role;
+
+    if (currentDbRole === "general") {
+      // Count how many donations this user has (including the one we just inserted)
+      const [countResult] = await promiseDb.query(
+        "SELECT COUNT(*) as count FROM Donation WHERE user_id = ?",
+        [user_id],
+      );
+      const donationCount = countResult[0].count;
+
+      if (donationCount === 1) {
+        // First donation → upgrade role to 'donor'
+        await promiseDb.query(
+          'UPDATE Users SET role = "donor" WHERE user_id = ?',
+          [user_id],
+        );
+        console.log(
+          `User ${user_id} upgraded from 'general' to 'donor' after their first donation.`,
+        );
+        // Note: The JWT token still contains the old role; the user can log out and log in to get a new token.
+      }
+    }
+
+    // --- 7. Send success response ---
     res.status(201).json({
       success: true,
       message: "Donation recorded successfully",
