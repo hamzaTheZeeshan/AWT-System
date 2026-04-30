@@ -266,7 +266,7 @@ img { display: block; max-width: 100%; }
 .awt-hero__content {
   position: relative;
   z-index: 1;
-  max-width: 700px;
+  max-width: 1000px;
   text-align: center;
 }
 
@@ -275,7 +275,7 @@ img { display: block; max-width: 100%; }
   background: rgba(255,255,255,0.12);
   border: 1px solid rgba(255,255,255,0.25);
   color: var(--clr-sage);
-  font-size: 0.8rem;
+  font-size: 2.4rem;
   font-weight: 600;
   letter-spacing: 0.12em;
   text-transform: uppercase;

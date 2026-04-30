@@ -1,6 +1,7 @@
 import { useState, FormEvent } from "react";
 import "./auth.css";
 import { AWTLogo, EmailIcon, LockIcon, SocialButtons } from "./AuthComponents";
+import { useNavigate } from "react-router-dom";
 
 interface LoginProps {
   onNavigateToRegister?: () => void;
@@ -13,6 +14,12 @@ export default function Login({ onNavigateToRegister }: LoginProps) {
   const [isError, setIsError] = useState(false);
   const [loading, setLoading] = useState(false);
 
+   const navigate = useNavigate();
+
+  const goToRegister = () => {
+    navigate("/signup");
+  };
+  
   const handleLogin = async (e: FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -105,7 +112,7 @@ export default function Login({ onNavigateToRegister }: LoginProps) {
 
         <p className="auth-footer">
           Don't have an account?{" "}
-          <button className="auth-footer__link" onClick={onNavigateToRegister} type="button">
+          <button className="auth-footer__link" onClick={goToRegister} type="button">
             Sign up
           </button>
         </p>

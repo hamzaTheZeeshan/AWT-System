@@ -1,6 +1,7 @@
 import { useState, FormEvent } from "react";
 import "./auth.css";
 import { AWTLogo, EmailIcon, LockIcon, UserIcon, PhoneIcon, SocialButtons } from "./AuthComponents";
+import { useNavigate } from "react-router-dom";
 
 interface RegisterForm {
   name: string;
@@ -26,6 +27,12 @@ export default function Register({ onNavigateToLogin }: RegisterProps) {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
+  };
+
+  const navigate = useNavigate();
+
+  const goToLogin = () => {
+    navigate("/signin");
   };
 
   const handleRegister = async (e: FormEvent) => {
@@ -145,7 +152,7 @@ export default function Register({ onNavigateToLogin }: RegisterProps) {
 
         <p className="auth-footer">
           Already have an account?{" "}
-          <button className="auth-footer__link" onClick={onNavigateToLogin} type="button">
+          <button className="auth-footer__link" onClick={goToLogin} type="button">
             Sign in
           </button>
         </p>
