@@ -19,7 +19,7 @@ const STATUS_LABELS: Record<string, string> = {
 const TYPE_ICONS: Record<string, string> = {
   Sadqah: "🤲",
   Zakat: "☪️",
-  Khairat: "💚",
+  Khairat: "💰",
   Clothes: "👕",
   Books: "📚",
 };
@@ -155,7 +155,7 @@ const MyDonations: React.FC = () => {
             <div key={donation.donation_id} className="md-card">
               <div className="md-card-left">
                 <div className="md-card-icon">
-                  {TYPE_ICONS[donation.type_name] || "💛"}
+                  {TYPE_ICONS[donation.type_name] || "💰"}
                 </div>
                 <div className="md-card-info">
                   <span className="md-card-type">{donation.type_name}</span>

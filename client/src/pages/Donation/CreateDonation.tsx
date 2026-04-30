@@ -137,8 +137,8 @@ const DonationForm: React.FC = () => {
                         <div className="select-wrapper">
                             <select value={donationTypeId} onChange={handleTypeChange}>
                                 <option value="">Select donation type</option>
-                                <option value="1">Zakat</option>
-                                <option value="2">Normal</option>
+                                <option value="1">Money</option>
+                                <option value="2">Zakat</option>
                                 <option value="3">Sadqah</option>
                                 <option value="4">Clothes</option>
                                 <option value="5">Books</option>

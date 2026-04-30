@@ -162,19 +162,7 @@ const DonationCharts: React.FC = () => {
       amount: t.total_amount,
       isItems: false,
       color: moneyColor(t.type_name),
-    })),
-    {
-      category: "Clothes",
-      amount: totals.total_clothes_items,
-      isItems: true,
-      color: TYPE_COLORS["Clothes"],
-    },
-    {
-      category: "Books",
-      amount: totals.total_books_items,
-      isItems: true,
-      color: TYPE_COLORS["Books"],
-    },
+    }))
   ].filter((d) => d.amount > 0);
 
   // Pie chart entries
@@ -183,9 +171,7 @@ const DonationCharts: React.FC = () => {
       name: t.type_name,
       value: Number(t.total_amount),  // ← add Number()
       color: moneyColor(t.type_name),
-    })),
-    { name: "Clothes", value: Number(totals.total_clothes_items), color: TYPE_COLORS["Clothes"] },
-    { name: "Books", value: Number(totals.total_books_items), color: TYPE_COLORS["Books"] },
+    }))
   ].filter((d) => d.value > 0);
 
   const grandTotal = pieData.reduce((sum, d) => sum + d.value, 0);
