@@ -216,7 +216,7 @@ const DonationCharts: React.FC = () => {
       <div className="dc-charts-grid">
         {/* Bar chart */}
         <div className="dc-chart-card">
-          <p className="dc-chart-title">Total Donations</p>
+          <p className="dc-chart-title">Total Monetary Donations</p>
           <p className="dc-chart-sub">Approved amounts by category</p>
 
           {/* Dynamic legend */}
@@ -269,7 +269,7 @@ const DonationCharts: React.FC = () => {
 
         {/* Donut chart */}
         <div className="dc-chart-card">
-          <p className="dc-chart-title">Distribution by Type</p>
+          <p className="dc-chart-title">Distribution by Money Donated</p>
           <p className="dc-chart-sub">Share of each donation category</p>
           <ResponsiveContainer width="100%" height={260}>
             <PieChart>

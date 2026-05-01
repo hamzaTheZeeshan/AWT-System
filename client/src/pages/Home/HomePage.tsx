@@ -1,26 +1,49 @@
 import React, { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import "./HomePage.css";
 import DonationCharts from "../Donation/DonationCharts";
 import MyDonations from "../Donation/MyDonations";
 
-
-
-
 const HomePage: React.FC = () => {
-  const [scrolled, setScrolled] = useState(false);
-  const [menuOpen, setMenuOpen] = useState(false);
+  const [scrolled, setScrolled]   = useState(false);
+  const [menuOpen, setMenuOpen]   = useState(false);
+  const [userName, setUserName]   = useState<string | null>(null);
+  const navigate                  = useNavigate();
 
+  // Read auth state on mount
+  useEffect(() => {
+    const token     = sessionStorage.getItem("token");
+    const userRaw   = sessionStorage.getItem("user");
+    if (token && userRaw) {
+      try {
+        const user = JSON.parse(userRaw);
+        if (user?.name) setUserName(user.name);
+      } catch {
+        // malformed JSON — treat as logged out
+      }
+    }
+  }, []);
+
+  // Scroll shadow
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 20);
     window.addEventListener("scroll", onScroll);
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
+  const handleLogout = () => {
+    sessionStorage.removeItem("token");
+    sessionStorage.removeItem("user");
+    setUserName(null);
+    navigate("/");
+  };
+
   return (
     <div className="awt-root">
+
       {/* ── NAVBAR ── */}
       <header className={`awt-nav ${scrolled ? "awt-nav--scrolled" : ""}`}>
+
         {/* Logo */}
         <Link to="/" className="awt-nav__logo">
           <img src="/logo.png" alt="Alamgir Welfare Trust" className="awt-nav__logo-img" />
@@ -29,17 +52,35 @@ const HomePage: React.FC = () => {
 
         {/* Nav links */}
         <nav className={`awt-nav__links ${menuOpen ? "awt-nav__links--open" : ""}`}>
-          <a href="#home" className="awt-nav__link awt-nav__link--active">Home</a>
-          <a href="#about" className="awt-nav__link">About</a>
+          <a href="#home"     className="awt-nav__link awt-nav__link--active">Home</a>
+          <a href="#about"    className="awt-nav__link">About</a>
           <a href="#services" className="awt-nav__link">Services</a>
-          <Link to="/contact" className="awt-nav__link">Contact Us</Link>
+          <Link to="/contact"         className="awt-nav__link">Contact Us</Link>
           <Link to="/create-donation" className="awt-nav__link awt-nav__link--donate">Donate Now</Link>
         </nav>
 
-        {/* Auth buttons */}
+        {/* Auth area */}
         <div className="awt-nav__auth">
-          <Link to="/signin" className="awt-btn awt-btn--outline">Sign In</Link>
-          <Link to="/signup" className="awt-btn awt-btn--solid">Sign Up</Link>
+          {userName ? (
+            // ── Logged in ──
+            <>
+              <span className="awt-nav__welcome">
+                Welcome, <strong>{userName}</strong>
+              </span>
+              <button
+                className="awt-btn awt-btn--outline"
+                onClick={handleLogout}
+              >
+                Log Out
+              </button>
+            </>
+          ) : (
+            // ── Logged out ──
+            <>
+              <Link to="/signin" className="awt-btn awt-btn--outline">Sign In</Link>
+              <Link to="/signup" className="awt-btn awt-btn--solid">Sign Up</Link>
+            </>
+          )}
         </div>
 
         {/* Hamburger */}
@@ -54,10 +95,8 @@ const HomePage: React.FC = () => {
 
       {/* ── HERO BANNER ── */}
       <section className="awt-hero" id="home">
-        {/* Replace the div below with an <img> or a CSS background-image for your banner */}
         <div className="awt-hero__bg" aria-hidden="true">
           <div className="awt-hero__overlay" />
-          {/* Decorative circles */}
           <div className="awt-hero__circle awt-hero__circle--1" />
           <div className="awt-hero__circle awt-hero__circle--2" />
         </div>
@@ -82,8 +121,8 @@ const HomePage: React.FC = () => {
         <div className="awt-hero__stats">
           {[
             { value: "50K+", label: "Lives Impacted" },
-            { value: "12+", label: "Years of Service" },
-            { value: "6", label: "Core Programmes" },
+            { value: "12+",  label: "Years of Service" },
+            { value: "6",    label: "Core Programmes" },
           ].map((s) => (
             <div key={s.label} className="awt-stat-pill">
               <span className="awt-stat-pill__value">{s.value}</span>
@@ -147,7 +186,7 @@ const HomePage: React.FC = () => {
         </div>
       </section>
 
-      {/* ── DONATION WIDGET PLACEHOLDER ── */}
+      {/* ── DONATION SECTION ── */}
       <section className="awt-donation" id="donation">
         <div className="awt-donation__inner">
           <div className="awt-donation__text">
@@ -157,9 +196,9 @@ const HomePage: React.FC = () => {
             </p>
             <Link to="/create-donation" className="awt-btn awt-btn--solid">Donate Now</Link>
           </div>
-          {<DonationCharts/>}
+          <DonationCharts />
           <div className="awt-donation__widget-placeholder">
-            {<MyDonations/>}
+            <MyDonations />
           </div>
         </div>
       </section>
@@ -185,6 +224,7 @@ const HomePage: React.FC = () => {
           </p>
         </div>
       </footer>
+
     </div>
   );
 };

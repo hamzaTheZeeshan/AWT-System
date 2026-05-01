@@ -581,3 +581,15 @@ img { display: block; max-width: 100%; }
   .awt-serve__grid { grid-template-columns: repeat(3, 1fr); }
   .awt-footer__inner { flex-direction: column; text-align: center; }
 }
+/* ── Append to HomePage.css ── */
+
+.awt-nav__welcome {
+  padding-top: 10px;
+  font-size: 14px;
+  color: inherit;
+  white-space: nowrap;
+}
+
+.awt-nav__welcome strong {
+  font-weight: 600;
+}
