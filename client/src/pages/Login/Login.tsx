@@ -19,6 +19,10 @@ export default function Login({ onNavigateToRegister }: LoginProps) {
   const goToRegister = () => {
     navigate("/signup");
   };
+
+  const goToHome = () => {
+    navigate("/");
+  };
   
   const handleLogin = async (e: FormEvent) => {
     e.preventDefault();
@@ -40,6 +44,7 @@ export default function Login({ onNavigateToRegister }: LoginProps) {
         sessionStorage.setItem("user", JSON.stringify(data.user));
         setIsError(false);
         setMessage("Login successful!");
+        goToHome();
       } else {
         setIsError(true);
         setMessage(data.message || "Invalid credentials");

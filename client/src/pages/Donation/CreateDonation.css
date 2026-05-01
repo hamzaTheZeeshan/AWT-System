@@ -276,4 +276,89 @@
 .submit-btn:disabled {
     opacity: 0.55;
     cursor: not-allowed;
+}/* ── Append these rules to your existing CreateDonation.css ── */
+
+/* Required field star */
+.required {
+    color: #e53e3e;
+    margin-left: 2px;
+}
+
+/* Item cards (clothes / books) */
+.items-form {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.item-card {
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 12px;
+    padding: 16px;
+    background: rgba(255, 255, 255, 0.04);
+}
+
+.item-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 14px;
+}
+
+.item-card-title {
+    font-size: 0.9rem;
+    font-weight: 600;
+    opacity: 0.85;
+}
+
+.remove-item-btn {
+    background: rgba(229, 62, 62, 0.15);
+    color: #fc8181;
+    border: 1px solid rgba(229, 62, 62, 0.3);
+    border-radius: 6px;
+    padding: 4px 10px;
+    font-size: 0.78rem;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.remove-item-btn:hover {
+    background: rgba(229, 62, 62, 0.3);
+}
+
+/* Two-column layout inside a card */
+.item-fields {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.field-row {
+    display: flex;
+    gap: 12px;
+}
+
+.field-col {
+    flex: 1;
+    min-width: 0;
+}
+
+/* Add another item button */
+.add-item-btn {
+    width: 100%;
+    padding: 10px;
+    border: 1px dashed rgba(255, 255, 255, 0.3);
+    border-radius: 10px;
+    background: transparent;
+    color: inherit;
+    opacity: 0.7;
+    font-size: 0.88rem;
+    cursor: pointer;
+    transition: opacity 0.2s, background 0.2s;
+    margin-top: 4px;
+}
+
+.add-item-btn:hover {
+    opacity: 1;
+    background: rgba(255, 255, 255, 0.06);
 }
