@@ -35,7 +35,7 @@ export const approveDonation = async (req, res) => {
     const donation_id = req.params.id;
     const promiseDb = db.promise();
 
-    // 1. Fetch donation details
+    // 1. Fetch donation details (including orphanage_id)
     const [donation] = await promiseDb.query(
       `SELECT d.*, c.target_amount, c.amount_raised 
        FROM Donation d
@@ -59,7 +59,7 @@ export const approveDonation = async (req, res) => {
       });
     }
 
-    // 3. For campaign donations: check if amount would exceed target (double‑check)
+    // 3. For campaign donations: check if amount would exceed target
     if (donationData.campaign_id) {
       const remaining =
         donationData.target_amount - (donationData.amount_raised || 0);
@@ -85,15 +85,15 @@ export const approveDonation = async (req, res) => {
       );
     }
 
-    // 6. If orphanage donation (receiver_id exists in Donation): auto-create Distribution record
-    if (donationData.receiver_id) {
+    // 6. If orphanage donation (orphanage_id exists): auto-create Distribution record
+    if (donationData.orphanage_id) {
       // Get next distribution_id
       const [maxId] = await promiseDb.query(
         "SELECT MAX(distribution_id) as maxId FROM Distribution",
       );
       const distribution_id = (maxId[0].maxId || 0) + 1;
 
-      // quantity: if donation is clothes/books, we need to sum from Clothes/Books; if money, use amount as quantity (or 1)
+      // quantity: if clothes/books, sum from Clothes/Books; else use amount or 1
       let quantity = 1;
       const donationTypeId = donationData.donation_type_id;
       if (donationTypeId === 4) {
@@ -114,10 +114,11 @@ export const approveDonation = async (req, res) => {
         quantity = donationData.amount || 1;
       }
 
+      // Insert into Distribution using orphanage_id (no receiver_id)
       await promiseDb.query(
-        `INSERT INTO Distribution (distribution_id, donation_id, receiver_id, date, quantity)
+        `INSERT INTO Distribution (distribution_id, donation_id, orphanage_id, date, quantity)
          VALUES (?, ?, ?, CURDATE(), ?)`,
-        [distribution_id, donation_id, donationData.receiver_id, quantity],
+        [distribution_id, donation_id, donationData.orphanage_id, quantity],
       );
     }
 
@@ -128,7 +129,7 @@ export const approveDonation = async (req, res) => {
       donation_id: donation_id,
       status: "approved",
       ...(donationData.campaign_id && { campaign_updated: true }),
-      ...(donationData.receiver_id && { distribution_created: true }),
+      ...(donationData.orphanage_id && { distribution_created: true }),
     });
   } catch (error) {
     console.error(error);
@@ -136,34 +137,28 @@ export const approveDonation = async (req, res) => {
   }
 };
 
-// @desc    Reject a donation (admin only)
-// @route   PUT /api/admin/donations/:id/reject
-// @access  Private/Admin
+
 export const rejectDonation = async (req, res) => {
   try {
     const donation_id = req.params.id;
     const promiseDb = db.promise();
-
     const [donation] = await promiseDb.query(
       "SELECT * FROM Donation WHERE donation_id = ?",
       [donation_id],
     );
-
     if (donation.length === 0) {
       return res
         .status(404)
         .json({ success: false, message: "Donation not found" });
     }
-
     await promiseDb.query(
       'UPDATE Donation SET status = "rejected" WHERE donation_id = ?',
       [donation_id],
     );
-
     res.json({
       success: true,
       message: "Donation rejected successfully",
-      donation_id: donation_id,
+      donation_id,
       status: "rejected",
     });
   } catch (error) {
@@ -300,34 +295,64 @@ export const getStats = async (req, res) => {
 // @access  Private/Admin
 export const createDistribution = async (req, res) => {
   try {
-    const { donation_id, receiver_id, quantity } = req.body;
+    const { donation_id, receiver_id, orphanage_id, quantity } = req.body;
     const promiseDb = db.promise();
 
-    // Check if donation exists and is approved
+    // 1. Check if donation exists and is approved
     const [donation] = await promiseDb.query(
       'SELECT * FROM Donation WHERE donation_id = ? AND status = "approved"',
       [donation_id],
     );
-
     if (donation.length === 0) {
       return res.status(404).json({
         success: false,
         message: "Approved donation not found",
       });
     }
-    // Check available quantity for clothes/books
+
+    // 2. Validate that exactly one destination is provided
+    if ((receiver_id && orphanage_id) || (!receiver_id && !orphanage_id)) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "Provide either receiver_id (for general receiver) or orphanage_id (for orphanage), not both, not none.",
+      });
+    }
+
+    // 3. Validate the destination exists
+    if (receiver_id) {
+      const [receiver] = await promiseDb.query(
+        "SELECT * FROM Reciever WHERE receiver_id = ?",
+        [receiver_id],
+      );
+      if (receiver.length === 0) {
+        return res
+          .status(404)
+          .json({ success: false, message: "Receiver not found" });
+      }
+    }
+    if (orphanage_id) {
+      const [orphanage] = await promiseDb.query(
+        "SELECT * FROM Orphanage WHERE orphanage_id = ?",
+        [orphanage_id],
+      );
+      if (orphanage.length === 0) {
+        return res
+          .status(404)
+          .json({ success: false, message: "Orphanage not found" });
+      }
+    }
+
+    // 4. Check available quantity (same as before)
     let availableQty = null;
     const donationTypeId = donation[0].donation_type_id;
-
     if (donationTypeId === 4) {
-      // Clothes
       const [clothes] = await promiseDb.query(
         "SELECT SUM(quantity) as total FROM Clothes WHERE donation_id = ?",
         [donation_id],
       );
       availableQty = clothes[0].total || 0;
     } else if (donationTypeId === 5) {
-      // Books
       const [books] = await promiseDb.query(
         "SELECT SUM(quantity) as total FROM Books WHERE donation_id = ?",
         [donation_id],
@@ -344,20 +369,26 @@ export const createDistribution = async (req, res) => {
       });
     }
 
-    // Get next distribution_id
+    // 5. Get next distribution_id
     const [maxId] = await promiseDb.query(
       "SELECT MAX(distribution_id) as maxId FROM Distribution",
     );
     const distribution_id = (maxId[0].maxId || 0) + 1;
 
-    // Create distribution record
+    // 6. Insert distribution (set only the appropriate column)
     await promiseDb.query(
-      `INSERT INTO Distribution (distribution_id, donation_id, receiver_id, date, quantity) 
-             VALUES (?, ?, ?, CURDATE(), ?)`,
-      [distribution_id, donation_id, receiver_id, quantity],
+      `INSERT INTO Distribution (distribution_id, donation_id, receiver_id, orphanage_id, date, quantity)
+       VALUES (?, ?, ?, ?, CURDATE(), ?)`,
+      [
+        distribution_id,
+        donation_id,
+        receiver_id || null,
+        orphanage_id || null,
+        quantity,
+      ],
     );
 
-    // Update donation status to distributed
+    // 7. Update donation status to distributed
     await promiseDb.query(
       'UPDATE Donation SET status = "distributed" WHERE donation_id = ?',
       [donation_id],
@@ -380,21 +411,19 @@ export const createDistribution = async (req, res) => {
 export const getAllDistributions = async (req, res) => {
   try {
     const promiseDb = db.promise();
-
     const [distributions] = await promiseDb.query(`
-            SELECT dist.*, d.donation_id, dt.type_name, r.name as receiver_name
-            FROM Distribution dist
-            JOIN Donation d ON dist.donation_id = d.donation_id
-            JOIN Donation_Type dt ON d.donation_type_id = dt.donation_type_id
-            JOIN Reciever r ON dist.receiver_id = r.receiver_id
-            ORDER BY dist.date DESC
-        `);
-
-    res.json({
-      success: true,
-      count: distributions.length,
-      distributions,
-    });
+      SELECT dist.*, 
+             COALESCE(r.name, o.name) as receiver_name,
+             CASE 
+               WHEN dist.receiver_id IS NOT NULL THEN 'general'
+               WHEN dist.orphanage_id IS NOT NULL THEN 'orphanage'
+             END as receiver_type
+      FROM Distribution dist
+      LEFT JOIN Reciever r ON dist.receiver_id = r.receiver_id
+      LEFT JOIN Orphanage o ON dist.orphanage_id = o.orphanage_id
+      ORDER BY dist.date DESC
+    `);
+    res.json({ success: true, count: distributions.length, distributions });
   } catch (error) {
     console.error(error);
     res.status(500).json({ success: false, message: "Server error" });
@@ -578,29 +607,90 @@ export const createOrphanage = async (req, res) => {
   try {
     const { name, location, contact_info } = req.body;
     const promiseDb = db.promise();
-    const [maxId] = await promiseDb.query(
-      "SELECT MAX(receiver_id) as maxId FROM Reciever",
+
+    // Insert directly into Orphanage table (orphanage_id auto-increments)
+    const [result] = await promiseDb.query(
+      "INSERT INTO Orphanage (name, location, contact_info) VALUES (?, ?, ?)",
+      [name, location, contact_info],
     );
-    const receiver_id = (maxId[0].maxId || 0) + 1;
-    await promiseDb.query(
-      "INSERT INTO Reciever (receiver_id, name, location, contact_info, sufficiency, needs_description, priority) VALUES (?, ?, ?, ?, ?, ?, ?)",
-      [
-        receiver_id,
-        name,
-        location,
-        contact_info,
-        "not_self_sufficient",
-        null,
-        null,
-      ],
-    );
-    await promiseDb.query(
-      "INSERT INTO Orphanage (receiver_id, name, location, contact_info) VALUES (?, ?, ?, ?)",
-      [receiver_id, name, location, contact_info],
-    );
+
+    res.status(201).json({
+      success: true,
+      message: "Orphanage created",
+      orphanage_id: result.insertId,
+    });
+  } catch (error) {
+    console.error(error);
     res
-      .status(201)
-      .json({ success: true, message: "Orphanage created", receiver_id });
+      .status(500)
+      .json({
+        success: false,
+        message: "Server error",
+        details: error.message,
+      });
+  }
+};
+
+// @desc    Get all interns (admin)
+// @route   GET /api/admin/interns
+export const getAllInterns = async (req, res) => {
+  try {
+    const promiseDb = db.promise();
+    const [interns] = await promiseDb.query(
+      "SELECT * FROM Intern ORDER BY end_date ASC"
+    );
+    res.json({ success: true, count: interns.length, interns });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+};
+
+// @desc    Create a new intern (admin)
+// @route   POST /api/admin/interns
+export const createIntern = async (req, res) => {
+  try {
+    const { name, role, assigned_task, end_date } = req.body;
+    const promiseDb = db.promise();
+    const [maxId] = await promiseDb.query("SELECT MAX(intern_id) as maxId FROM Intern");
+    const intern_id = (maxId[0].maxId || 0) + 1;
+    await promiseDb.query(
+      "INSERT INTO Intern (intern_id, name, role, assigned_task, end_date) VALUES (?, ?, ?, ?, ?)",
+      [intern_id, name, role, assigned_task, end_date]
+    );
+    res.status(201).json({ success: true, message: "Intern created", intern_id });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+};
+
+// @desc    Update an intern (admin)
+// @route   PUT /api/admin/interns/:id
+export const updateIntern = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name, role, assigned_task, end_date } = req.body;
+    const promiseDb = db.promise();
+    await promiseDb.query(
+      "UPDATE Intern SET name = ?, role = ?, assigned_task = ?, end_date = ? WHERE intern_id = ?",
+      [name, role, assigned_task, end_date, id]
+    );
+    res.json({ success: true, message: "Intern updated" });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+};
+
+// @desc    Delete an intern (admin)
+// @route   DELETE /api/admin/interns/:id
+export const deleteIntern = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const promiseDb = db.promise();
+    await promiseDb.query("DELETE FROM Intern WHERE intern_id = ?", [id]);
+    res.json({ success: true, message: "Intern deleted" });
   } catch (error) {
     console.error(error);
     res.status(500).json({ success: false, message: "Server error" });

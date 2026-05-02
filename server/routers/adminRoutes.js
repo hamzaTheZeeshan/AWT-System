@@ -23,6 +23,13 @@ import {
   createOrphanage
 } from "../controllers/adminController.js";
 
+import {
+  // ... existing imports ...
+  getAllInterns,
+  createIntern,
+  updateIntern,
+  deleteIntern,
+} from "../controllers/adminController.js";
 const router = express.Router();
 
 // All admin routes require authentication AND admin role
@@ -50,5 +57,10 @@ router.post("/receivers", createReceiver);
 router.delete("/receivers/:id", deleteReceiver);
 
 router.post("/orphanages", createOrphanage);
+
+router.get("/interns", getAllInterns);
+router.post("/interns", createIntern);
+router.put("/interns/:id", updateIntern);
+router.delete("/interns/:id", deleteIntern);
 
 export default router;

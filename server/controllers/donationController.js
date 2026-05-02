@@ -14,7 +14,7 @@ const getNextId = async (table, idColumn) => {
 // @access  Private
 export const createDonation = async (req, res) => {
   try {
-    const { donation_type_id, amount, campaign_id, receiver_id, items } =
+    const { donation_type_id, amount, campaign_id, orphanage_id, items } =
       req.body;
     const user_id = req.user.user_id;
     const promiseDb = db.promise();
@@ -52,7 +52,7 @@ export const createDonation = async (req, res) => {
             "Amount is required and must be > 0 for Money/Zakat/Sadaqah.",
         });
       }
-      // --- NEW: Campaign validation & over-donation check ---
+      // Campaign validation & over-donation check
       if (campaign_id) {
         const [campaign] = await promiseDb.query(
           `SELECT * FROM Campaign WHERE campaign_id = ? AND end_date >= CURDATE()`,
@@ -91,13 +91,11 @@ export const createDonation = async (req, res) => {
             'Amount should not be provided for Clothes/Books. Use "items".',
         });
       }
-      // --- NEW: Orphanage validation (if receiver_id provided) ---
-      if (receiver_id) {
+      // --- NEW: Validate orphanage_id (directly against Orphanage table) ---
+      if (orphanage_id) {
         const [orphanage] = await promiseDb.query(
-          `SELECT r.receiver_id FROM Reciever r
-           JOIN Orphanage o ON r.receiver_id = o.receiver_id
-           WHERE r.receiver_id = ?`,
-          [receiver_id],
+          "SELECT * FROM Orphanage WHERE orphanage_id = ?",
+          [orphanage_id],
         );
         if (orphanage.length === 0) {
           return res.status(400).json({
@@ -126,15 +124,15 @@ export const createDonation = async (req, res) => {
     // --- 3. Get next donation_id ---
     const donation_id = await getNextId("Donation", "donation_id");
 
-    // --- 4. Insert into Donation table (including campaign_id and receiver_id) ---
+    // --- 4. Insert into Donation table (using orphanage_id, not receiver_id) ---
     await promiseDb.query(
-      `INSERT INTO Donation (donation_id, user_id, campaign_id, receiver_id, donation_type_id, date, amount, status) 
+      `INSERT INTO Donation (donation_id, user_id, campaign_id, orphanage_id, donation_type_id, date, amount, status) 
        VALUES (?, ?, ?, ?, ?, CURDATE(), ?, 'pending')`,
       [
         donation_id,
         user_id,
         campaign_id || null,
-        receiver_id || null, // NEW: store the chosen orphanage
+        orphanage_id || null,
         donation_type_id,
         amount || null,
       ],
