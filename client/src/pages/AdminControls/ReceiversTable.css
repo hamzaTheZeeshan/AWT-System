@@ -1,0 +1,252 @@
+/* ─── Receivers Table ─── */
+
+/* Filter Tabs — same as DonationsTable */
+.filter-tabs {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+.filter-tab {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 14px;
+  border-radius: 20px;
+  font-size: 0.82rem;
+  font-weight: 500;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface-2);
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition: all var(--transition);
+}
+.filter-tab:hover { border-color: var(--color-primary-lt); color: var(--color-primary); }
+.filter-tab.active { font-weight: 600; }
+.filter-tab.active.filter-all      { background: var(--color-primary-bg);  border-color: var(--color-primary-lt); color: var(--color-primary-dk); }
+.filter-tab.active.filter-orphanage { background: var(--color-pending-bg);  border-color: #d4a843; color: var(--color-pending); }
+.filter-tab.active.filter-general  { background: var(--color-approved-bg); border-color: #5aab84; color: var(--color-approved); }
+
+.tab-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  background: var(--color-border);
+  border-radius: 10px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--color-text-muted);
+}
+.filter-tab.active .tab-count { background: rgba(0,0,0,0.08); color: inherit; }
+
+/* Header action buttons */
+.header-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.add-receiver-btn,
+.add-orphanage-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border-radius: var(--radius-sm);
+  font-size: 0.82rem;
+  font-weight: 600;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all var(--transition);
+}
+.add-receiver-btn svg,
+.add-orphanage-btn svg {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+}
+
+.add-receiver-btn {
+  background: var(--color-primary);
+  color: #fff;
+  border-color: var(--color-primary);
+}
+.add-receiver-btn:hover { background: var(--color-primary-dk); border-color: var(--color-primary-dk); }
+
+.add-orphanage-btn {
+  background: var(--color-pending-bg);
+  color: var(--color-pending);
+  border-color: #d4a843;
+}
+.add-orphanage-btn:hover { background: var(--color-pending); color: #fff; border-color: var(--color-pending); }
+
+/* Type badges — Orphanage / General */
+.type-badge {
+  display: inline-block;
+  padding: 3px 10px;
+  background: var(--color-border-soft);
+  color: var(--color-text-muted);
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.type-badge-orphanage { background: var(--color-pending-bg);  color: var(--color-pending);  }
+.type-badge-general   { background: var(--color-approved-bg); color: var(--color-approved); }
+
+/* Priority badges — reuse status-badge base */
+.status-badge {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.priority-high   { background: var(--color-rejected-bg); color: var(--color-rejected); }
+.priority-medium { background: var(--color-pending-bg);  color: var(--color-pending);  }
+.priority-low    { background: var(--color-approved-bg); color: var(--color-approved); }
+
+/* Sufficiency badges */
+.sufficiency-self { background: var(--color-approved-bg); color: var(--color-approved); }
+.sufficiency-not  { background: var(--color-rejected-bg); color: var(--color-rejected); }
+
+/* Delete button — same as reject-btn in DonationsTable */
+.reject-btn {
+  padding: 5px 12px;
+  background: var(--color-rejected-bg);
+  color: var(--color-rejected);
+  border-radius: var(--radius-sm);
+  font-size: 0.78rem;
+  font-weight: 600;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all var(--transition);
+}
+.reject-btn:hover:not(:disabled) { background: var(--color-rejected); color: #fff; }
+.reject-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+.no-action { color: var(--color-text-soft); font-size: 0.85rem; padding-left: 4px; }
+
+/* ─── Modals ─── */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  animation: fadeIn 0.15s ease;
+}
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+.modal-box {
+  background: var(--color-surface);
+  border-radius: var(--radius);
+  padding: 28px 32px;
+  width: 100%;
+  max-width: 460px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.14);
+  animation: slideUp 0.2s ease;
+}
+@keyframes slideUp {
+  from { transform: translateY(12px); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+
+.modal-title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  margin-bottom: 20px;
+  color: var(--color-text);
+}
+
+.modal-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin-bottom: 14px;
+}
+.modal-field label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.modal-field input,
+.modal-field textarea,
+.modal-field select {
+  padding: 8px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-2);
+  color: var(--color-text);
+  font-size: 0.85rem;
+  outline: none;
+  transition: border-color var(--transition);
+}
+.modal-field input:focus,
+.modal-field textarea:focus,
+.modal-field select:focus { border-color: var(--color-primary-lt); }
+.modal-field textarea { resize: vertical; min-height: 70px; }
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 20px;
+}
+
+.modal-cancel-btn {
+  padding: 8px 16px;
+  background: var(--color-surface-2);
+  color: var(--color-text-muted);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition);
+}
+.modal-cancel-btn:hover { border-color: var(--color-text-muted); color: var(--color-text); }
+
+.modal-save-btn {
+  padding: 8px 16px;
+  background: var(--color-primary);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition);
+}
+.modal-save-btn:hover:not(:disabled) { background: var(--color-primary-dk); }
+.modal-save-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.modal-delete-btn {
+  padding: 8px 16px;
+  background: var(--color-rejected);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition);
+}
+.modal-delete-btn:hover:not(:disabled) { opacity: 0.85; }
+.modal-delete-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.confirm-text {
+  font-size: 0.88rem;
+  color: var(--color-text-muted);
+  margin-bottom: 20px;
+  line-height: 1.5;
+}
+.confirm-text strong { color: var(--color-text); }

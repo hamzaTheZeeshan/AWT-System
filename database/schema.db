@@ -113,3 +113,6 @@ ALTER TABLE Reciever ADD COLUMN sufficiency ENUM('self_sufficient', 'not_self_su
 ALTER TABLE Reciever 
 ADD COLUMN needs_description TEXT,
 ADD COLUMN priority ENUM('high', 'medium', 'low') DEFAULT 'medium';
+
+
+select * from campaign;
