@@ -5,15 +5,16 @@ import DonationCharts from "../Donation/DonationCharts";
 import MyDonations from "../Donation/MyDonations";
 
 const HomePage: React.FC = () => {
-  const [scrolled, setScrolled]   = useState(false);
-  const [menuOpen, setMenuOpen]   = useState(false);
-  const [userName, setUserName]   = useState<string | null>(null);
-  const navigate                  = useNavigate();
+  const [scrolled, setScrolled] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [userName, setUserName] = useState<string | null>(null);
+  const navigate = useNavigate();
+  const [userRole, setUserRole] = useState<string | null>(null);
 
   // Read auth state on mount
   useEffect(() => {
-    const token     = sessionStorage.getItem("token");
-    const userRaw   = sessionStorage.getItem("user");
+    const token = sessionStorage.getItem("token");
+    const userRaw = sessionStorage.getItem("user");
     if (token && userRaw) {
       try {
         const user = JSON.parse(userRaw);
@@ -26,9 +27,17 @@ const HomePage: React.FC = () => {
 
   // Scroll shadow
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 20);
-    window.addEventListener("scroll", onScroll);
-    return () => window.removeEventListener("scroll", onScroll);
+    const token = sessionStorage.getItem("token");
+    const userRaw = sessionStorage.getItem("user");
+    if (token && userRaw) {
+      try {
+        const user = JSON.parse(userRaw);
+        if (user?.name) setUserName(user.name);
+        if (user?.role) setUserRole(user.role);  // ← add this line
+      } catch {
+        // malformed JSON — treat as logged out
+      }
+    }
   }, []);
 
   const handleLogout = () => {
@@ -51,14 +60,35 @@ const HomePage: React.FC = () => {
         </Link>
 
         {/* Nav links */}
-        <nav className={`awt-nav__links ${menuOpen ? "awt-nav__links--open" : ""}`}>
-          <a href="#home"     className="awt-nav__link awt-nav__link--active">Home</a>
-          <a href="#about"    className="awt-nav__link">About</a>
-          <a href="#services" className="awt-nav__link">Services</a>
-          <Link to="/contact"         className="awt-nav__link">Contact Us</Link>
-          <Link to="/create-donation" className="awt-nav__link awt-nav__link--donate">Donate Now</Link>
-        </nav>
 
+
+        <nav className={`awt-nav__links ${menuOpen ? "awt-nav__links--open" : ""}`}>
+          <Link to="/" className="awt-nav__link awt-nav__link--active">
+            Home
+          </Link>
+
+          <Link to="/about" className="awt-nav__link">
+            About
+          </Link>
+
+          <Link to="/services" className="awt-nav__link">
+            Services
+          </Link>
+
+          <Link to="/contact" className="awt-nav__link">
+            Contact Us
+          </Link>
+
+          {userRole === "admin" && (
+            <Link to="/admin" className="awt-nav__link awt-nav__link--admin">
+              Admin Control
+            </Link>
+          )}
+
+          <Link to="/create-donation" className="awt-nav__link awt-nav__link--donate">
+            Donate Now
+          </Link>
+        </nav>
         {/* Auth area */}
         <div className="awt-nav__auth">
           {userName ? (
@@ -121,8 +151,8 @@ const HomePage: React.FC = () => {
         <div className="awt-hero__stats">
           {[
             { value: "50K+", label: "Lives Impacted" },
-            { value: "12+",  label: "Years of Service" },
-            { value: "6",    label: "Core Programmes" },
+            { value: "12+", label: "Years of Service" },
+            { value: "6", label: "Core Programmes" },
           ].map((s) => (
             <div key={s.label} className="awt-stat-pill">
               <span className="awt-stat-pill__value">{s.value}</span>

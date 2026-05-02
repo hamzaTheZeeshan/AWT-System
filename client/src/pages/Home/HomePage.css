@@ -563,7 +563,7 @@ img { display: block; max-width: 100%; }
     border-bottom: 1px solid var(--clr-border);
     flex-direction: column;
     padding: 16px 24px 24px;
-    gap: 4px;
+    gap: 14px;
     box-shadow: var(--shadow-md);
   }
   .awt-nav__links--open { display: flex; }
@@ -592,4 +592,16 @@ img { display: block; max-width: 100%; }
 
 .awt-nav__welcome strong {
   font-weight: 600;
+}
+
+.awt-nav__link--admin {
+  color: #3a5433;
+  transition: background 0.2s, color 0.2s;
+  padding-right: 12px;
+  padding-left: 10px;
+}
+
+.awt-nav__link--admin:hover {
+  background: #4a6741;
+  color: #fff;
 }
