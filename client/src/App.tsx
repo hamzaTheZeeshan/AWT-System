@@ -5,6 +5,8 @@ import HomePage from "./pages/Home/HomePage";
 import { Route, Routes } from "react-router-dom";
 import { BrowserRouter } from "react-router-dom";
 import AdminControl from "./pages/AdminControls/AdminControl";
+import AboutPage from "./pages/AboutUs/AboutPage";
+import ContactPage from "./pages/ContactUs/ContactPage";
 
 const App: React.FC = () => {
   return (
@@ -14,6 +16,8 @@ const App: React.FC = () => {
       <Route path="/signin" element={<Login />} />
       <Route path="/signup" element={<Register />} />
       <Route path="/admin" element={<AdminControl />} />
+      <Route path="/about" element={<AboutPage />} />
+      <Route path="/contact" element={<ContactPage />} />
     </Routes>
   );
 };

@@ -143,7 +143,7 @@ const HomePage: React.FC = () => {
           </p>
           <div className="awt-hero__cta">
             <Link to="/create-donation" className="awt-btn awt-btn--solid awt-btn--lg">Donate Now</Link>
-            <a href="#about" className="awt-btn awt-btn--ghost awt-btn--lg">Learn More</a>
+            <Link to="/about" className="awt-btn awt-btn--solid awt-btn--lg">Learn More</Link>
           </div>
         </div>
 
