@@ -1,0 +1,95 @@
+/* ─── AWT SYSTEM — Global Styles ─── */
+@import url("https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap");
+
+:root {
+  --color-bg:          #eef0eb;
+  --color-surface:     #f5f6f2;
+  --color-surface-2:   #ffffff;
+  --color-border:      #dde0d8;
+  --color-border-soft: #e8ebe3;
+
+  --color-primary:     #4a6741;
+  --color-primary-dk:  #3a5433;
+  --color-primary-lt:  #6b8f62;
+  --color-primary-bg:  #e8ede6;
+
+  --color-text:        #2c3328;
+  --color-text-muted:  #7a8575;
+  --color-text-soft:   #9da899;
+
+  --color-approved:    #3a7c5e;
+  --color-approved-bg: #e3f2eb;
+  --color-rejected:    #b84c4c;
+  --color-rejected-bg: #fceaea;
+  --color-pending:     #8a6b2a;
+  --color-pending-bg:  #fdf4e3;
+
+  --shadow-sm: 0 1px 3px rgba(44,51,40,0.08);
+  --shadow-md: 0 4px 12px rgba(44,51,40,0.10);
+
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+
+  --font-body: "DM Sans", sans-serif;
+  --font-mono: "DM Mono", monospace;
+
+  --sidebar-width-open:   260px;
+  --sidebar-width-closed: 68px;
+  --transition: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body, #root { height: 100%; }
+
+body {
+  font-family: var(--font-body);
+  background: var(--color-bg);
+  color: var(--color-text);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+button { font-family: var(--font-body); cursor: pointer; border: none; background: none; }
+button:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.loading-state {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 48px;
+  color: var(--color-text-muted);
+  font-size: 0.95rem;
+}
+
+.spinner {
+  width: 20px;
+  height: 20px;
+  border: 2px solid var(--color-border);
+  border-top-color: var(--color-primary);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  flex-shrink: 0;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.error-state {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 16px 20px;
+  background: var(--color-rejected-bg);
+  color: var(--color-rejected);
+  border-radius: var(--radius-md);
+  font-size: 0.9rem;
+  margin-bottom: 20px;
+}
+.error-state svg { width: 18px; height: 18px; flex-shrink: 0; }
+
+.empty-state {
+  padding: 48px;
+  text-align: center;
+  color: var(--color-text-muted);
+  font-size: 0.95rem;
+}

@@ -1,0 +1,23 @@
+/* ─── Admin Layout ─── */
+.admin-layout {
+  display: flex;
+  height: 100vh;
+  overflow: hidden;
+  background: var(--color-bg);
+}
+
+.admin-main {
+  flex: 1;
+  overflow-y: auto;
+  min-width: 0;
+}
+
+.admin-content {
+  padding: 32px;
+  max-width: 1200px;
+  min-height: 100%;
+}
+
+.admin-main::-webkit-scrollbar { width: 6px; }
+.admin-main::-webkit-scrollbar-track { background: transparent; }
+.admin-main::-webkit-scrollbar-thumb { background: var(--color-border); border-radius: 3px; }

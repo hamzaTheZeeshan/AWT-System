@@ -1,0 +1,96 @@
+/* ─── Donations Table ─── */
+.filter-tabs {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.filter-tab {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 14px;
+  border-radius: 20px;
+  font-size: 0.82rem;
+  font-weight: 500;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface-2);
+  color: var(--color-text-muted);
+  transition: all var(--transition);
+}
+.filter-tab:hover { border-color: var(--color-primary-lt); color: var(--color-primary); }
+.filter-tab.active { font-weight: 600; }
+.filter-tab.active.filter-all    { background: var(--color-primary-bg); border-color: var(--color-primary-lt); color: var(--color-primary-dk); }
+.filter-tab.active.filter-pending  { background: var(--color-pending-bg);  border-color: #d4a843; color: var(--color-pending); }
+.filter-tab.active.filter-approved { background: var(--color-approved-bg); border-color: #5aab84; color: var(--color-approved); }
+.filter-tab.active.filter-rejected { background: var(--color-rejected-bg); border-color: #d47a7a; color: var(--color-rejected); }
+
+.tab-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  background: var(--color-border);
+  border-radius: 10px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--color-text-muted);
+}
+.filter-tab.active .tab-count { background: rgba(0,0,0,0.08); color: inherit; }
+
+.type-badge {
+  display: inline-block;
+  padding: 3px 10px;
+  background: var(--color-border-soft);
+  color: var(--color-text-muted);
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.amount-cell { font-family: var(--font-mono); }
+.amount { font-weight: 600; color: var(--color-primary-dk); font-size: 0.88rem; }
+
+.status-badge {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.status-pending  { background: var(--color-pending-bg);  color: var(--color-pending); }
+.status-approved { background: var(--color-approved-bg); color: var(--color-approved); }
+.status-rejected { background: var(--color-rejected-bg); color: var(--color-rejected); }
+
+.action-btns { display: flex; gap: 6px; }
+
+.approve-btn {
+  padding: 5px 12px;
+  background: var(--color-approved-bg);
+  color: var(--color-approved);
+  border-radius: var(--radius-sm);
+  font-size: 0.78rem;
+  font-weight: 600;
+  border: 1px solid transparent;
+  transition: all var(--transition);
+}
+.approve-btn:hover:not(:disabled) { background: var(--color-approved); color: #fff; }
+
+.reject-btn {
+  padding: 5px 12px;
+  background: var(--color-rejected-bg);
+  color: var(--color-rejected);
+  border-radius: var(--radius-sm);
+  font-size: 0.78rem;
+  font-weight: 600;
+  border: 1px solid transparent;
+  transition: all var(--transition);
+}
+.reject-btn:hover:not(:disabled) { background: var(--color-rejected); color: #fff; }
+
+.no-action { color: var(--color-text-soft); font-size: 0.85rem; padding-left: 4px; }

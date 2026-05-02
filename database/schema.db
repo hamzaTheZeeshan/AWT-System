@@ -103,3 +103,13 @@ values (1, "Money"),
  (3, "Sadqah"),
 (4, "Clothes"),
 (5, "Books");
+
+ALTER TABLE Campaign ADD COLUMN amount_raised DECIMAL(15,2) DEFAULT 0;
+ALTER TABLE Donation ADD COLUMN receiver_id INT;
+ALTER TABLE Donation ADD FOREIGN KEY (receiver_id) REFERENCES Reciever(receiver_id);
+
+ALTER TABLE Reciever ADD COLUMN sufficiency ENUM('self_sufficient', 'not_self_sufficient') DEFAULT 'not_self_sufficient';
+
+ALTER TABLE Reciever 
+ADD COLUMN needs_description TEXT,
+ADD COLUMN priority ENUM('high', 'medium', 'low') DEFAULT 'medium';
