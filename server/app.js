@@ -6,6 +6,8 @@ import "./db.js";
 import authRoutes from "./routers/authRoutes.js";
 import donationRoutes from "./routers/donationRoutes.js";
 import adminRoutes from "./routers/adminRoutes.js";
+import campaignRoutes from "./routers/campaignRoutes.js";
+import orphanageRoutes from "./routers/orphanageRoutes.js";
 
 const app = express();
 
@@ -24,6 +26,8 @@ app.post("/test", (req, res) => {
 app.use("/api/auth", authRoutes);
 app.use("/api/donations", donationRoutes);
 app.use("/api/admin", adminRoutes);
+app.use("/api/campaigns", campaignRoutes);
+app.use("/api/orphanages", orphanageRoutes);
 
 const PORT = 5000;
 app.listen(PORT, () => {

@@ -35,27 +35,100 @@ export const approveDonation = async (req, res) => {
     const donation_id = req.params.id;
     const promiseDb = db.promise();
 
+    // 1. Fetch donation details
     const [donation] = await promiseDb.query(
-      "SELECT * FROM Donation WHERE donation_id = ?",
+      `SELECT d.*, c.target_amount, c.amount_raised 
+       FROM Donation d
+       LEFT JOIN Campaign c ON d.campaign_id = c.campaign_id
+       WHERE d.donation_id = ?`,
       [donation_id],
     );
-
     if (donation.length === 0) {
       return res
         .status(404)
         .json({ success: false, message: "Donation not found" });
     }
 
+    const donationData = donation[0];
+
+    // 2. If already approved or distributed, reject
+    if (donationData.status !== "pending") {
+      return res.status(400).json({
+        success: false,
+        message: `Donation already ${donationData.status}. Cannot approve.`,
+      });
+    }
+
+    // 3. For campaign donations: check if amount would exceed target (double‑check)
+    if (donationData.campaign_id) {
+      const remaining =
+        donationData.target_amount - (donationData.amount_raised || 0);
+      if (donationData.amount > remaining) {
+        return res.status(400).json({
+          success: false,
+          message: `Approving this donation would exceed campaign target. Remaining need: ${remaining}`,
+        });
+      }
+    }
+
+    // 4. Update donation status to 'approved'
     await promiseDb.query(
-      'UPDATE Donation SET status = "approved" WHERE donation_id = ?',
+      "UPDATE Donation SET status = 'approved' WHERE donation_id = ?",
       [donation_id],
     );
 
+    // 5. If campaign donation: increment campaign amount_raised
+    if (donationData.campaign_id) {
+      await promiseDb.query(
+        "UPDATE Campaign SET amount_raised = amount_raised + ? WHERE campaign_id = ?",
+        [donationData.amount, donationData.campaign_id],
+      );
+    }
+
+    // 6. If orphanage donation (receiver_id exists in Donation): auto-create Distribution record
+    if (donationData.receiver_id) {
+      // Get next distribution_id
+      const [maxId] = await promiseDb.query(
+        "SELECT MAX(distribution_id) as maxId FROM Distribution",
+      );
+      const distribution_id = (maxId[0].maxId || 0) + 1;
+
+      // quantity: if donation is clothes/books, we need to sum from Clothes/Books; if money, use amount as quantity (or 1)
+      let quantity = 1;
+      const donationTypeId = donationData.donation_type_id;
+      if (donationTypeId === 4) {
+        // Clothes
+        const [clothesSum] = await promiseDb.query(
+          "SELECT SUM(quantity) as total FROM Clothes WHERE donation_id = ?",
+          [donation_id],
+        );
+        quantity = clothesSum[0].total || 1;
+      } else if (donationTypeId === 5) {
+        // Books
+        const [booksSum] = await promiseDb.query(
+          "SELECT SUM(quantity) as total FROM Books WHERE donation_id = ?",
+          [donation_id],
+        );
+        quantity = booksSum[0].total || 1;
+      } else {
+        quantity = donationData.amount || 1;
+      }
+
+      await promiseDb.query(
+        `INSERT INTO Distribution (distribution_id, donation_id, receiver_id, date, quantity)
+         VALUES (?, ?, ?, CURDATE(), ?)`,
+        [distribution_id, donation_id, donationData.receiver_id, quantity],
+      );
+    }
+
+    // 7. Return success
     res.json({
       success: true,
       message: "Donation approved successfully",
       donation_id: donation_id,
       status: "approved",
+      ...(donationData.campaign_id && { campaign_updated: true }),
+      ...(donationData.receiver_id && { distribution_created: true }),
     });
   } catch (error) {
     console.error(error);
@@ -145,12 +218,10 @@ export const deleteUser = async (req, res) => {
 
     // Don't allow admin to delete themselves
     if (user_id == req.user.user_id) {
-      return res
-        .status(400)
-        .json({
-          success: false,
-          message: "Cannot delete your own admin account",
-        });
+      return res.status(400).json({
+        success: false,
+        message: "Cannot delete your own admin account",
+      });
     }
 
     await promiseDb.query("DELETE FROM Users WHERE user_id = ?", [user_id]);
@@ -330,5 +401,208 @@ export const getAllDistributions = async (req, res) => {
   }
 };
 
+// @desc    Create a campaign
+// @route   POST /api/admin/campaigns
+export const createCampaign = async (req, res) => {
+  try {
+    const { title, description, target_amount, end_date } = req.body;
+    const promiseDb = db.promise();
+    const [maxId] = await promiseDb.query(
+      "SELECT MAX(campaign_id) as maxId FROM Campaign",
+    );
+    const campaign_id = (maxId[0].maxId || 0) + 1;
+    await promiseDb.query(
+      "INSERT INTO Campaign (campaign_id, title, description, target_amount, end_date) VALUES (?, ?, ?, ?, ?)",
+      [campaign_id, title, description, target_amount, end_date],
+    );
+    res
+      .status(201)
+      .json({ success: true, message: "Campaign created", campaign_id });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+};
 
-//MANAGE DISTRIBUTION FUNCTION REMAINING!!!!!!
+// @desc    Update a campaign
+// @route   PUT /api/admin/campaigns/:id
+export const updateCampaign = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { title, description, target_amount, end_date } = req.body;
+    const promiseDb = db.promise();
+    await promiseDb.query(
+      "UPDATE Campaign SET title = ?, description = ?, target_amount = ?, end_date = ? WHERE campaign_id = ?",
+      [title, description, target_amount, end_date, id],
+    );
+    res.json({ success: true, message: "Campaign updated" });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+};
+
+// @desc    Delete a campaign
+// @route   DELETE /api/admin/campaigns/:id
+export const deleteCampaign = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const promiseDb = db.promise();
+    await promiseDb.query("DELETE FROM Campaign WHERE campaign_id = ?", [id]);
+    res.json({ success: true, message: "Campaign deleted" });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+};
+
+// @desc    Get all campaigns (admin)
+// @route   GET /api/admin/campaigns
+export const getAllCampaigns = async (req, res) => {
+  try {
+    const promiseDb = db.promise();
+    const [campaigns] = await promiseDb.query(`
+      SELECT 
+        c.campaign_id,
+        c.title,
+        c.description,
+        c.target_amount,
+        c.end_date,
+        COALESCE(c.amount_raised, 0) as amount_raised,
+        CASE 
+          WHEN c.end_date < CURDATE() THEN 'expired'
+          WHEN COALESCE(c.amount_raised, 0) >= c.target_amount THEN 'completed'
+          ELSE 'active'
+        END as status
+      FROM Campaign c
+      ORDER BY c.campaign_id
+    `);
+    res.json({ success: true, campaigns });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+};
+
+// @desc    Get all receivers (with orphanage flag)
+// @desc    Get all receivers (with orphanage flag and sufficiency)
+// @desc    Get all receivers (with orphanage flag and sufficiency)
+export const getAllReceivers = async (req, res) => {
+  try {
+    const promiseDb = db.promise();
+    const [receivers] = await promiseDb.query(`
+      SELECT r.receiver_id, r.name, r.location, r.contact_info, 
+             r.sufficiency, r.needs_description, r.priority,
+             CASE WHEN o.receiver_id IS NOT NULL THEN 1 ELSE 0 END as is_orphanage
+      FROM Reciever r
+      LEFT JOIN Orphanage o ON r.receiver_id = o.receiver_id
+      ORDER BY r.receiver_id
+    `);
+    res.json({ success: true, receivers });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+};
+
+// @desc    Create a general receiver (not orphanage)
+// @desc    Create a general receiver (not orphanage)
+export const createReceiver = async (req, res) => {
+  try {
+    const {
+      name,
+      location,
+      contact_info,
+      sufficiency,
+      needs_description,
+      priority,
+    } = req.body;
+    const promiseDb = db.promise();
+    const [maxId] = await promiseDb.query(
+      "SELECT MAX(receiver_id) as maxId FROM Reciever",
+    );
+    const receiver_id = (maxId[0].maxId || 0) + 1;
+    await promiseDb.query(
+      `INSERT INTO Reciever (receiver_id, name, location, contact_info, sufficiency, needs_description, priority) 
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      [
+        receiver_id,
+        name,
+        location,
+        contact_info,
+        sufficiency || "not_self_sufficient",
+        needs_description || null,
+        priority || "medium",
+      ],
+    );
+    res
+      .status(201)
+      .json({ success: true, message: "Receiver created", receiver_id });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+};
+
+// @desc    Delete a receiver (only if no distributions? We'll allow cascade but warn)
+export const deleteReceiver = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const promiseDb = db.promise();
+    // Check if receiver has distributions
+    const [dist] = await promiseDb.query(
+      "SELECT * FROM Distribution WHERE receiver_id = ?",
+      [id],
+    );
+    if (dist.length > 0) {
+      return res
+        .status(400)
+        .json({
+          success: false,
+          message: "Cannot delete: receiver has distributions",
+        });
+    }
+    // Also delete from Orphanage if exists
+    await promiseDb.query("DELETE FROM Orphanage WHERE receiver_id = ?", [id]);
+    await promiseDb.query("DELETE FROM Reciever WHERE receiver_id = ?", [id]);
+    res.json({ success: true, message: "Receiver deleted" });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+};
+
+// @desc    Create orphanage (adds to Reciever and Orphanage)
+// @desc    Create orphanage (adds to Reciever and Orphanage)
+export const createOrphanage = async (req, res) => {
+  try {
+    const { name, location, contact_info } = req.body;
+    const promiseDb = db.promise();
+    const [maxId] = await promiseDb.query(
+      "SELECT MAX(receiver_id) as maxId FROM Reciever",
+    );
+    const receiver_id = (maxId[0].maxId || 0) + 1;
+    await promiseDb.query(
+      "INSERT INTO Reciever (receiver_id, name, location, contact_info, sufficiency, needs_description, priority) VALUES (?, ?, ?, ?, ?, ?, ?)",
+      [
+        receiver_id,
+        name,
+        location,
+        contact_info,
+        "not_self_sufficient",
+        null,
+        null,
+      ],
+    );
+    await promiseDb.query(
+      "INSERT INTO Orphanage (receiver_id, name, location, contact_info) VALUES (?, ?, ?, ?)",
+      [receiver_id, name, location, contact_info],
+    );
+    res
+      .status(201)
+      .json({ success: true, message: "Orphanage created", receiver_id });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+};

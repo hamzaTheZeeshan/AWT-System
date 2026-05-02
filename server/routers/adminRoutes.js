@@ -9,6 +9,19 @@ import {
 } from "../controllers/adminController.js";
 import { protect } from "../middleware/authMiddleware.js";
 import { admin } from "../middleware/adminMiddleware.js";
+import {
+  createCampaign,
+  updateCampaign,
+  deleteCampaign,
+} from "../controllers/adminController.js";
+import { getAllCampaigns } from "../controllers/adminController.js";
+
+import {
+  getAllReceivers,
+  createReceiver,
+  deleteReceiver,
+  createOrphanage
+} from "../controllers/adminController.js";
 
 const router = express.Router();
 
@@ -26,5 +39,16 @@ router.delete("/users/:id", deleteUser);
 
 // Reports & statistics
 router.get("/reports/stats", getStats);
+
+router.post("/campaigns", createCampaign);
+router.put("/campaigns/:id", updateCampaign);
+router.delete("/campaigns/:id", deleteCampaign);
+router.get("/campaigns", getAllCampaigns);
+
+router.get("/receivers", getAllReceivers);
+router.post("/receivers", createReceiver);
+router.delete("/receivers/:id", deleteReceiver);
+
+router.post("/orphanages", createOrphanage);
 
 export default router;
