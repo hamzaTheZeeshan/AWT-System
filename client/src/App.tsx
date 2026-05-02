@@ -4,6 +4,7 @@ import CreateDonation from "./pages/Donation/CreateDonation";
 import HomePage from "./pages/Home/HomePage";
 import { Route, Routes } from "react-router-dom";
 import { BrowserRouter } from "react-router-dom";
+import AdminControl from "./pages/AdminControls/AdminControl";
 
 const App: React.FC = () => {
   return (
@@ -12,7 +13,7 @@ const App: React.FC = () => {
       <Route path="/create-donation" element={<CreateDonation />} />
       <Route path="/signin" element={<Login />} />
       <Route path="/signup" element={<Register />} />
-      <Route path="/contact" element={<Login />} />
+      <Route path="/contact" element={<AdminControl />} />
     </Routes>
   );
 };

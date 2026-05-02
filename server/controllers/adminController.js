@@ -107,7 +107,7 @@ export const getAllUsers = async (req, res) => {
     const promiseDb = db.promise();
 
     const [users] = await promiseDb.query(`
-            SELECT user_id, name, email, phone, role, created_at
+            SELECT user_id, name, email, phone, role
             FROM Users
             ORDER BY user_id
         `);
