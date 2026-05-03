@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import "./HomePage.css";
 import DonationCharts from "../Donation/DonationCharts";
 import MyDonations from "../Donation/MyDonations";
+import CampaignsList from "../CampaignsList/CampaignsList";
 
 const HomePage: React.FC = () => {
   const [scrolled, setScrolled] = useState(false);
@@ -11,7 +12,6 @@ const HomePage: React.FC = () => {
   const navigate = useNavigate();
   const [userRole, setUserRole] = useState<string | null>(null);
 
-  // Read auth state on mount
   useEffect(() => {
     const token = sessionStorage.getItem("token");
     const userRaw = sessionStorage.getItem("user");
@@ -19,21 +19,7 @@ const HomePage: React.FC = () => {
       try {
         const user = JSON.parse(userRaw);
         if (user?.name) setUserName(user.name);
-      } catch {
-        // malformed JSON — treat as logged out
-      }
-    }
-  }, []);
-
-  // Scroll shadow
-  useEffect(() => {
-    const token = sessionStorage.getItem("token");
-    const userRaw = sessionStorage.getItem("user");
-    if (token && userRaw) {
-      try {
-        const user = JSON.parse(userRaw);
-        if (user?.name) setUserName(user.name);
-        if (user?.role) setUserRole(user.role);  // ← add this line
+        if (user?.role) setUserRole(user.role);
       } catch {
         // malformed JSON — treat as logged out
       }
@@ -52,60 +38,33 @@ const HomePage: React.FC = () => {
 
       {/* ── NAVBAR ── */}
       <header className={`awt-nav ${scrolled ? "awt-nav--scrolled" : ""}`}>
-
-        {/* Logo */}
         <Link to="/" className="awt-nav__logo">
           <img src="/logo.png" alt="Alamgir Welfare Trust" className="awt-nav__logo-img" />
           <span className="awt-nav__logo-text">AWT System</span>
         </Link>
 
-        {/* Nav links */}
-
-
         <nav className={`awt-nav__links ${menuOpen ? "awt-nav__links--open" : ""}`}>
-          <Link to="/" className="awt-nav__link awt-nav__link--active">
-            Home
-          </Link>
-
-          <Link to="/about" className="awt-nav__link">
-            About
-          </Link>
-
-          <Link to="/services" className="awt-nav__link">
-            Services
-          </Link>
-
-          <Link to="/contact" className="awt-nav__link">
-            Contact Us
-          </Link>
-
+          <Link to="/" className="awt-nav__link awt-nav__link--active">Home</Link>
+          <Link to="/about" className="awt-nav__link">About</Link>
+          <Link to="/services" className="awt-nav__link">Services</Link>
+          <Link to="/contact" className="awt-nav__link">Contact Us</Link>
           {userRole === "admin" && (
-            <Link to="/admin" className="awt-nav__link awt-nav__link--admin">
-              Admin Control
-            </Link>
+            <Link to="/admin" className="awt-nav__link awt-nav__link--admin">Admin Control</Link>
           )}
-
-          <Link to="/create-donation" className="awt-nav__link awt-nav__link--donate">
-            Donate Now
-          </Link>
+          <Link to="/create-donation" className="awt-nav__link awt-nav__link--donate">Donate Now</Link>
         </nav>
-        {/* Auth area */}
+
         <div className="awt-nav__auth">
           {userName ? (
-            // ── Logged in ──
             <>
               <span className="awt-nav__welcome">
                 Welcome, <strong>{userName}</strong>
               </span>
-              <button
-                className="awt-btn awt-btn--outline"
-                onClick={handleLogout}
-              >
+              <button className="awt-btn awt-btn--outline" onClick={handleLogout}>
                 Log Out
               </button>
             </>
           ) : (
-            // ── Logged out ──
             <>
               <Link to="/signin" className="awt-btn awt-btn--outline">Sign In</Link>
               <Link to="/signup" className="awt-btn awt-btn--solid">Sign Up</Link>
@@ -113,7 +72,6 @@ const HomePage: React.FC = () => {
           )}
         </div>
 
-        {/* Hamburger */}
         <button
           className={`awt-nav__hamburger ${menuOpen ? "open" : ""}`}
           onClick={() => setMenuOpen(!menuOpen)}
@@ -147,7 +105,6 @@ const HomePage: React.FC = () => {
           </div>
         </div>
 
-        {/* Stat pills */}
         <div className="awt-hero__stats">
           {[
             { value: "50K+", label: "Lives Impacted" },
@@ -193,31 +150,37 @@ const HomePage: React.FC = () => {
               icon: "🔔",
               title: "Spread The Word",
               desc: "Help us by sharing information about AWT's services so that others can avail them.",
+              path: "/about",
             },
             {
               icon: "🤝",
               title: "Work With Us",
               desc: "Volunteer at Alamgir Welfare Trust and do your part in serving the society.",
+              path: "/contact",
             },
             {
               icon: "💵",
               title: "Donate",
               desc: "Donate to Alamgir Welfare Trust and help us in helping others. Spread joy with a donation.",
+              path: "/create-donation",
             },
           ].map((item) => (
-            <div key={item.title} className="awt-help__card">
-              <div className="awt-help__icon-circle">
-                <span className="awt-help__icon">{item.icon}</span>
+            <Link key={item.title} to={item.path} className="awt-help__card-link">
+              <div className="awt-help__card">
+                <div className="awt-help__icon-circle">
+                  <span className="awt-help__icon">{item.icon}</span>
+                </div>
+                <h3 className="awt-help__card-title">{item.title}</h3>
+                <p className="awt-help__card-desc">{item.desc}</p>
               </div>
-              <h3 className="awt-help__card-title">{item.title}</h3>
-              <p className="awt-help__card-desc">{item.desc}</p>
-            </div>
+            </Link>
           ))}
         </div>
       </section>
 
       {/* ── DONATION SECTION ── */}
       <section className="awt-donation" id="donation">
+        {/* Top row: text + charts */}
         <div className="awt-donation__inner">
           <div className="awt-donation__text">
             <h2 className="awt-donation__title">Make a Donation</h2>
@@ -227,9 +190,12 @@ const HomePage: React.FC = () => {
             <Link to="/create-donation" className="awt-btn awt-btn--solid">Donate Now</Link>
           </div>
           <DonationCharts />
-          <div className="awt-donation__widget-placeholder">
-            <MyDonations />
-          </div>
+        </div>
+
+        {/* Bottom: stacked widgets */}
+        <div className="awt-donation__widgets">
+          <MyDonations />
+          <CampaignsList />
         </div>
       </section>
 

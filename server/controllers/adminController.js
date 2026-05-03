@@ -35,7 +35,7 @@ export const approveDonation = async (req, res) => {
     const donation_id = req.params.id;
     const promiseDb = db.promise();
 
-    // 1. Fetch donation details (including orphanage_id)
+    // 1. Fetch donation details
     const [donation] = await promiseDb.query(
       `SELECT d.*, c.target_amount, c.amount_raised 
        FROM Donation d
@@ -87,15 +87,9 @@ export const approveDonation = async (req, res) => {
 
     // 6. If orphanage donation (orphanage_id exists): auto-create Distribution record
     if (donationData.orphanage_id) {
-      // Get next distribution_id
-      const [maxId] = await promiseDb.query(
-        "SELECT MAX(distribution_id) as maxId FROM Distribution",
-      );
-      const distribution_id = (maxId[0].maxId || 0) + 1;
-
-      // quantity: if clothes/books, sum from Clothes/Books; else use amount or 1
       let quantity = 1;
       const donationTypeId = donationData.donation_type_id;
+
       if (donationTypeId === 4) {
         // Clothes
         const [clothesSum] = await promiseDb.query(
@@ -114,11 +108,11 @@ export const approveDonation = async (req, res) => {
         quantity = donationData.amount || 1;
       }
 
-      // Insert into Distribution using orphanage_id (no receiver_id)
+      // AUTO_INCREMENT handles distribution_id — no manual ID needed
       await promiseDb.query(
-        `INSERT INTO Distribution (distribution_id, donation_id, orphanage_id, date, quantity)
-         VALUES (?, ?, ?, CURDATE(), ?)`,
-        [distribution_id, donation_id, donationData.orphanage_id, quantity],
+        `INSERT INTO Distribution (donation_id, orphanage_id, date, quantity)
+         VALUES (?, ?, CURDATE(), ?)`,
+        [donation_id, donationData.orphanage_id, quantity],
       );
     }
 
@@ -137,11 +131,14 @@ export const approveDonation = async (req, res) => {
   }
 };
 
-
+// @desc    Reject a donation (admin only)
+// @route   PUT /api/admin/donations/:id/reject
+// @access  Private/Admin
 export const rejectDonation = async (req, res) => {
   try {
     const donation_id = req.params.id;
     const promiseDb = db.promise();
+
     const [donation] = await promiseDb.query(
       "SELECT * FROM Donation WHERE donation_id = ?",
       [donation_id],
@@ -151,10 +148,12 @@ export const rejectDonation = async (req, res) => {
         .status(404)
         .json({ success: false, message: "Donation not found" });
     }
+
     await promiseDb.query(
       'UPDATE Donation SET status = "rejected" WHERE donation_id = ?',
       [donation_id],
     );
+
     res.json({
       success: true,
       message: "Donation rejected successfully",
@@ -199,7 +198,6 @@ export const deleteUser = async (req, res) => {
     const user_id = req.params.id;
     const promiseDb = db.promise();
 
-    // Check if user exists
     const [user] = await promiseDb.query(
       "SELECT * FROM Users WHERE user_id = ?",
       [user_id],
@@ -238,14 +236,14 @@ export const getStats = async (req, res) => {
   try {
     const promiseDb = db.promise();
 
-    // Total donations amount (approved only)
+    // Total donations amount (approved only, monetary types)
     const [totalMoney] = await promiseDb.query(`
             SELECT SUM(amount) as total 
             FROM Donation 
             WHERE donation_type_id IN (1,2,3) AND status = 'approved'
         `);
 
-    // Total number of donations
+    // Total number of approved donations
     const [totalDonations] = await promiseDb.query(`
             SELECT COUNT(*) as count 
             FROM Donation 
@@ -290,7 +288,7 @@ export const getStats = async (req, res) => {
   }
 };
 
-// @desc    Manage distribution (admin only)
+// @desc    Create a distribution (admin only)
 // @route   POST /api/admin/distribution
 // @access  Private/Admin
 export const createDistribution = async (req, res) => {
@@ -321,8 +319,9 @@ export const createDistribution = async (req, res) => {
 
     // 3. Validate the destination exists
     if (receiver_id) {
+      // NOTE: Table name in DB is 'receiver' (typo) — update here if you fix the schema
       const [receiver] = await promiseDb.query(
-        "SELECT * FROM Reciever WHERE receiver_id = ?",
+        "SELECT * FROM receiver WHERE receiver_id = ?",
         [receiver_id],
       );
       if (receiver.length === 0) {
@@ -343,9 +342,10 @@ export const createDistribution = async (req, res) => {
       }
     }
 
-    // 4. Check available quantity (same as before)
+    // 4. Check available quantity
     let availableQty = null;
     const donationTypeId = donation[0].donation_type_id;
+
     if (donationTypeId === 4) {
       const [clothes] = await promiseDb.query(
         "SELECT SUM(quantity) as total FROM Clothes WHERE donation_id = ?",
@@ -369,26 +369,14 @@ export const createDistribution = async (req, res) => {
       });
     }
 
-    // 5. Get next distribution_id
-    const [maxId] = await promiseDb.query(
-      "SELECT MAX(distribution_id) as maxId FROM Distribution",
-    );
-    const distribution_id = (maxId[0].maxId || 0) + 1;
-
-    // 6. Insert distribution (set only the appropriate column)
-    await promiseDb.query(
-      `INSERT INTO Distribution (distribution_id, donation_id, receiver_id, orphanage_id, date, quantity)
-       VALUES (?, ?, ?, ?, CURDATE(), ?)`,
-      [
-        distribution_id,
-        donation_id,
-        receiver_id || null,
-        orphanage_id || null,
-        quantity,
-      ],
+    // 5. Insert distribution — AUTO_INCREMENT handles distribution_id
+    const [result] = await promiseDb.query(
+      `INSERT INTO Distribution (donation_id, receiver_id, orphanage_id, date, quantity)
+       VALUES (?, ?, ?, CURDATE(), ?)`,
+      [donation_id, receiver_id || null, orphanage_id || null, quantity],
     );
 
-    // 7. Update donation status to distributed
+    // 6. Update donation status to distributed
     await promiseDb.query(
       'UPDATE Donation SET status = "distributed" WHERE donation_id = ?',
       [donation_id],
@@ -397,7 +385,7 @@ export const createDistribution = async (req, res) => {
     res.status(201).json({
       success: true,
       message: "Distribution created successfully",
-      distribution_id: distribution_id,
+      distribution_id: result.insertId,
     });
   } catch (error) {
     console.error(error);
@@ -411,6 +399,7 @@ export const createDistribution = async (req, res) => {
 export const getAllDistributions = async (req, res) => {
   try {
     const promiseDb = db.promise();
+
     const [distributions] = await promiseDb.query(`
       SELECT dist.*, 
              COALESCE(r.name, o.name) as receiver_name,
@@ -419,10 +408,11 @@ export const getAllDistributions = async (req, res) => {
                WHEN dist.orphanage_id IS NOT NULL THEN 'orphanage'
              END as receiver_type
       FROM Distribution dist
-      LEFT JOIN Reciever r ON dist.receiver_id = r.receiver_id
+      LEFT JOIN receiver r ON dist.receiver_id = r.receiver_id
       LEFT JOIN Orphanage o ON dist.orphanage_id = o.orphanage_id
       ORDER BY dist.date DESC
     `);
+
     res.json({ success: true, count: distributions.length, distributions });
   } catch (error) {
     console.error(error);
@@ -432,21 +422,23 @@ export const getAllDistributions = async (req, res) => {
 
 // @desc    Create a campaign
 // @route   POST /api/admin/campaigns
+// @access  Private/Admin
 export const createCampaign = async (req, res) => {
   try {
     const { title, description, target_amount, end_date } = req.body;
     const promiseDb = db.promise();
-    const [maxId] = await promiseDb.query(
-      "SELECT MAX(campaign_id) as maxId FROM Campaign",
+
+    // AUTO_INCREMENT handles campaign_id
+    const [result] = await promiseDb.query(
+      "INSERT INTO Campaign (title, description, target_amount, end_date) VALUES (?, ?, ?, ?)",
+      [title, description, target_amount, end_date],
     );
-    const campaign_id = (maxId[0].maxId || 0) + 1;
-    await promiseDb.query(
-      "INSERT INTO Campaign (campaign_id, title, description, target_amount, end_date) VALUES (?, ?, ?, ?, ?)",
-      [campaign_id, title, description, target_amount, end_date],
-    );
-    res
-      .status(201)
-      .json({ success: true, message: "Campaign created", campaign_id });
+
+    res.status(201).json({
+      success: true,
+      message: "Campaign created",
+      campaign_id: result.insertId,
+    });
   } catch (error) {
     console.error(error);
     res.status(500).json({ success: false, message: "Server error" });
@@ -455,15 +447,18 @@ export const createCampaign = async (req, res) => {
 
 // @desc    Update a campaign
 // @route   PUT /api/admin/campaigns/:id
+// @access  Private/Admin
 export const updateCampaign = async (req, res) => {
   try {
     const { id } = req.params;
     const { title, description, target_amount, end_date } = req.body;
     const promiseDb = db.promise();
+
     await promiseDb.query(
       "UPDATE Campaign SET title = ?, description = ?, target_amount = ?, end_date = ? WHERE campaign_id = ?",
       [title, description, target_amount, end_date, id],
     );
+
     res.json({ success: true, message: "Campaign updated" });
   } catch (error) {
     console.error(error);
@@ -473,11 +468,14 @@ export const updateCampaign = async (req, res) => {
 
 // @desc    Delete a campaign
 // @route   DELETE /api/admin/campaigns/:id
+// @access  Private/Admin
 export const deleteCampaign = async (req, res) => {
   try {
     const { id } = req.params;
     const promiseDb = db.promise();
+
     await promiseDb.query("DELETE FROM Campaign WHERE campaign_id = ?", [id]);
+
     res.json({ success: true, message: "Campaign deleted" });
   } catch (error) {
     console.error(error);
@@ -487,9 +485,11 @@ export const deleteCampaign = async (req, res) => {
 
 // @desc    Get all campaigns (admin)
 // @route   GET /api/admin/campaigns
+// @access  Private/Admin
 export const getAllCampaigns = async (req, res) => {
   try {
     const promiseDb = db.promise();
+
     const [campaigns] = await promiseDb.query(`
       SELECT 
         c.campaign_id,
@@ -506,6 +506,7 @@ export const getAllCampaigns = async (req, res) => {
       FROM Campaign c
       ORDER BY c.campaign_id
     `);
+
     res.json({ success: true, campaigns });
   } catch (error) {
     console.error(error);
@@ -521,13 +522,16 @@ export const getAllCampaigns = async (req, res) => {
 export const getAllReceivers = async (req, res) => {
   try {
     const promiseDb = db.promise();
+
+    // NOTE: Table is named 'receiver' in the DB schema (typo preserved)
     const [receivers] = await promiseDb.query(`
       SELECT receiver_id, name, location, contact_info, 
              sufficiency, needs_description, priority
       FROM Reciever
       ORDER BY receiver_id
     `);
-    res.json({ success: true, receivers });
+
+    res.json({ success: true, count: receivers.length, receivers });
   } catch (error) {
     console.error(error);
     res.status(500).json({ success: false, message: "Server error" });
@@ -535,27 +539,19 @@ export const getAllReceivers = async (req, res) => {
 };
 
 // @desc    Create a general receiver (not orphanage)
-// @desc    Create a general receiver (not orphanage)
+// @route   POST /api/admin/receivers
+// @access  Private/Admin
 export const createReceiver = async (req, res) => {
   try {
-    const {
-      name,
-      location,
-      contact_info,
-      sufficiency,
-      needs_description,
-      priority,
-    } = req.body;
+    const { name, location, contact_info, sufficiency, needs_description, priority } =
+      req.body;
     const promiseDb = db.promise();
-    const [maxId] = await promiseDb.query(
-      "SELECT MAX(receiver_id) as maxId FROM Reciever",
-    );
-    const receiver_id = (maxId[0].maxId || 0) + 1;
-    await promiseDb.query(
-      `INSERT INTO Reciever (receiver_id, name, location, contact_info, sufficiency, needs_description, priority) 
-       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+
+    // AUTO_INCREMENT handles receiver_id
+    const [result] = await promiseDb.query(
+      `INSERT INTO receiver (name, location, contact_info, sufficiency, needs_description, priority) 
+       VALUES (?, ?, ?, ?, ?, ?)`,
       [
-        receiver_id,
         name,
         location,
         contact_info,
@@ -564,16 +560,21 @@ export const createReceiver = async (req, res) => {
         priority || "medium",
       ],
     );
-    res
-      .status(201)
-      .json({ success: true, message: "Receiver created", receiver_id });
+
+    res.status(201).json({
+      success: true,
+      message: "Receiver created",
+      receiver_id: result.insertId,
+    });
   } catch (error) {
     console.error(error);
     res.status(500).json({ success: false, message: "Server error" });
   }
 };
 
-// @desc    Delete a receiver (only if no distributions? We'll allow cascade but warn)
+// @desc    Delete a receiver
+// @route   DELETE /api/admin/receivers/:id
+// @access  Private/Admin
 export const deleteReceiver = async (req, res) => {
   try {
     const { id } = req.params;
@@ -601,14 +602,35 @@ export const deleteReceiver = async (req, res) => {
   }
 };
 
-// @desc    Create orphanage (adds to Reciever and Orphanage)
-// @desc    Create orphanage (adds to Reciever and Orphanage)
+// @desc    Get all orphanages (admin)
+// @route   GET /api/admin/orphanages
+// @access  Private/Admin
+export const getAllOrphanages = async (req, res) => {
+  try {
+    const promiseDb = db.promise();
+
+    const [orphanages] = await promiseDb.query(`
+      SELECT orphanage_id, name, location, contact_info
+      FROM Orphanage
+      ORDER BY orphanage_id
+    `);
+
+    res.json({ success: true, count: orphanages.length, orphanages });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+};
+
+// @desc    Create orphanage
+// @route   POST /api/admin/orphanages
+// @access  Private/Admin
 export const createOrphanage = async (req, res) => {
   try {
     const { name, location, contact_info } = req.body;
     const promiseDb = db.promise();
 
-    // Insert directly into Orphanage table (orphanage_id auto-increments)
+    // AUTO_INCREMENT handles orphanage_id
     const [result] = await promiseDb.query(
       "INSERT INTO Orphanage (name, location, contact_info) VALUES (?, ?, ?)",
       [name, location, contact_info],
@@ -621,24 +643,54 @@ export const createOrphanage = async (req, res) => {
     });
   } catch (error) {
     console.error(error);
-    res
-      .status(500)
-      .json({
+    res.status(500).json({
+      success: false,
+      message: "Server error",
+      details: error.message,
+    });
+  }
+};
+
+// @desc    Delete an orphanage
+// @route   DELETE /api/admin/orphanages/:id
+// @access  Private/Admin
+export const deleteOrphanage = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const promiseDb = db.promise();
+
+    // Check if orphanage has distributions before deleting
+    const [dist] = await promiseDb.query(
+      "SELECT * FROM Distribution WHERE orphanage_id = ?",
+      [id],
+    );
+    if (dist.length > 0) {
+      return res.status(400).json({
         success: false,
-        message: "Server error",
-        details: error.message,
+        message: "Cannot delete: orphanage has distributions",
       });
+    }
+
+    await promiseDb.query("DELETE FROM Orphanage WHERE orphanage_id = ?", [id]);
+
+    res.json({ success: true, message: "Orphanage deleted" });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ success: false, message: "Server error" });
   }
 };
 
 // @desc    Get all interns (admin)
 // @route   GET /api/admin/interns
+// @access  Private/Admin
 export const getAllInterns = async (req, res) => {
   try {
     const promiseDb = db.promise();
+
     const [interns] = await promiseDb.query(
-      "SELECT * FROM Intern ORDER BY end_date ASC"
+      "SELECT * FROM Intern ORDER BY end_date ASC",
     );
+
     res.json({ success: true, count: interns.length, interns });
   } catch (error) {
     console.error(error);
@@ -648,17 +700,23 @@ export const getAllInterns = async (req, res) => {
 
 // @desc    Create a new intern (admin)
 // @route   POST /api/admin/interns
+// @access  Private/Admin
 export const createIntern = async (req, res) => {
   try {
     const { name, role, assigned_task, end_date } = req.body;
     const promiseDb = db.promise();
-    const [maxId] = await promiseDb.query("SELECT MAX(intern_id) as maxId FROM Intern");
-    const intern_id = (maxId[0].maxId || 0) + 1;
-    await promiseDb.query(
-      "INSERT INTO Intern (intern_id, name, role, assigned_task, end_date) VALUES (?, ?, ?, ?, ?)",
-      [intern_id, name, role, assigned_task, end_date]
+
+    // AUTO_INCREMENT handles intern_id
+    const [result] = await promiseDb.query(
+      "INSERT INTO Intern (name, role, assigned_task, end_date) VALUES (?, ?, ?, ?)",
+      [name, role, assigned_task, end_date],
     );
-    res.status(201).json({ success: true, message: "Intern created", intern_id });
+
+    res.status(201).json({
+      success: true,
+      message: "Intern created",
+      intern_id: result.insertId,
+    });
   } catch (error) {
     console.error(error);
     res.status(500).json({ success: false, message: "Server error" });
@@ -667,15 +725,18 @@ export const createIntern = async (req, res) => {
 
 // @desc    Update an intern (admin)
 // @route   PUT /api/admin/interns/:id
+// @access  Private/Admin
 export const updateIntern = async (req, res) => {
   try {
     const { id } = req.params;
     const { name, role, assigned_task, end_date } = req.body;
     const promiseDb = db.promise();
+
     await promiseDb.query(
       "UPDATE Intern SET name = ?, role = ?, assigned_task = ?, end_date = ? WHERE intern_id = ?",
-      [name, role, assigned_task, end_date, id]
+      [name, role, assigned_task, end_date, id],
     );
+
     res.json({ success: true, message: "Intern updated" });
   } catch (error) {
     console.error(error);
@@ -685,11 +746,14 @@ export const updateIntern = async (req, res) => {
 
 // @desc    Delete an intern (admin)
 // @route   DELETE /api/admin/interns/:id
+// @access  Private/Admin
 export const deleteIntern = async (req, res) => {
   try {
     const { id } = req.params;
     const promiseDb = db.promise();
+
     await promiseDb.query("DELETE FROM Intern WHERE intern_id = ?", [id]);
+
     res.json({ success: true, message: "Intern deleted" });
   } catch (error) {
     console.error(error);

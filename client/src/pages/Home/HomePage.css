@@ -605,3 +605,20 @@ img { display: block; max-width: 100%; }
   background: #4a6741;
   color: #fff;
 }
+
+.awt-help__card-link {
+  text-decoration: none;
+  color: inherit;
+  display: block;
+}
+
+/* Donation widgets — stacked vertically, full width */
+.awt-donation__widgets {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  width: 100%;
+  max-width: 900px;
+  margin: 32px auto 0;
+  padding: 0 24px;
+}

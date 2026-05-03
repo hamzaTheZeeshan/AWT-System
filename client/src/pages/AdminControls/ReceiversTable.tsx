@@ -6,7 +6,7 @@ import "./ReceiversTable.css";
 // SELECT r.receiver_id, r.name, r.location, r.contact_info,
 //        r.sufficiency, r.needs_description, r.priority,
 //        CASE WHEN o.receiver_id IS NOT NULL THEN 1 ELSE 0 END as is_orphanage
-// FROM Reciever r
+// FROM receiver r
 // LEFT JOIN Orphanage o ON r.receiver_id = o.receiver_id
 interface Receiver {
   receiver_id: number;
