@@ -5,7 +5,7 @@ export const getOrphanages = async (req, res) => {
     const promiseDb = db.promise();
     const [orphanages] = await promiseDb.query(`
       SELECT r.receiver_id, r.name, r.location, r.contact_info
-      FROM Reciever r
+      FROM receiver r
       JOIN Orphanage o ON r.receiver_id = o.receiver_id
     `);
     res.json({ success: true, orphanages });

@@ -33,7 +33,7 @@ CREATE TABLE Intern (
     end_date DATE
 );
 
-CREATE TABLE Reciever (
+CREATE TABLE receiver (
     receiver_id INT PRIMARY KEY,
     name VARCHAR(255),
     location VARCHAR(255),
@@ -83,7 +83,7 @@ CREATE TABLE Orphanage (
     name VARCHAR(255),
     location VARCHAR(255),
     contact_info VARCHAR(255),
-    FOREIGN KEY (receiver_id) REFERENCES Reciever(receiver_id)
+    FOREIGN KEY (receiver_id) REFERENCES receiver(receiver_id)
 );
 
 CREATE TABLE Distribution (
@@ -93,7 +93,7 @@ CREATE TABLE Distribution (
     date DATE,
     quantity INT,
     FOREIGN KEY (donation_id) REFERENCES Donation(donation_id),
-    FOREIGN KEY (receiver_id) REFERENCES Reciever(receiver_id)
+    FOREIGN KEY (receiver_id) REFERENCES receiver(receiver_id)
 );
 
 
@@ -106,11 +106,11 @@ values (1, "Money"),
 
 ALTER TABLE Campaign ADD COLUMN amount_raised DECIMAL(15,2) DEFAULT 0;
 ALTER TABLE Donation ADD COLUMN receiver_id INT;
-ALTER TABLE Donation ADD FOREIGN KEY (receiver_id) REFERENCES Reciever(receiver_id);
+ALTER TABLE Donation ADD FOREIGN KEY (receiver_id) REFERENCES receiver(receiver_id);
 
-ALTER TABLE Reciever ADD COLUMN sufficiency ENUM('self_sufficient', 'not_self_sufficient') DEFAULT 'not_self_sufficient';
+ALTER TABLE receiver ADD COLUMN sufficiency ENUM('self_sufficient', 'not_self_sufficient') DEFAULT 'not_self_sufficient';
 
-ALTER TABLE Reciever 
+ALTER TABLE receiver 
 ADD COLUMN needs_description TEXT,
 ADD COLUMN priority ENUM('high', 'medium', 'low') DEFAULT 'medium';
 
