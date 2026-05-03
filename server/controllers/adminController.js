@@ -654,31 +654,6 @@ export const createOrphanage = async (req, res) => {
 // @desc    Delete an orphanage
 // @route   DELETE /api/admin/orphanages/:id
 // @access  Private/Admin
-export const deleteOrphanage = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const promiseDb = db.promise();
-
-    // Check if orphanage has distributions before deleting
-    const [dist] = await promiseDb.query(
-      "SELECT * FROM Distribution WHERE orphanage_id = ?",
-      [id],
-    );
-    if (dist.length > 0) {
-      return res.status(400).json({
-        success: false,
-        message: "Cannot delete: orphanage has distributions",
-      });
-    }
-
-    await promiseDb.query("DELETE FROM Orphanage WHERE orphanage_id = ?", [id]);
-
-    res.json({ success: true, message: "Orphanage deleted" });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ success: false, message: "Server error" });
-  }
-};
 
 // @desc    Get all interns (admin)
 // @route   GET /api/admin/interns
@@ -763,18 +738,6 @@ export const deleteIntern = async (req, res) => {
 
 // @desc    Get all orphanages (admin only)
 // @route   GET /api/admin/orphanages
-export const getAllOrphanages = async (req, res) => {
-  try {
-    const promiseDb = db.promise();
-    const [orphanages] = await promiseDb.query(
-      "SELECT orphanage_id, name, location, contact_info FROM Orphanage ORDER BY name"
-    );
-    res.json({ success: true, orphanages });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ success: false, message: "Server error" });
-  }
-};
 
 // @desc    Update orphanage (admin only)
 // @route   PUT /api/admin/orphanages/:id
