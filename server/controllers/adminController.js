@@ -527,7 +527,7 @@ export const getAllReceivers = async (req, res) => {
     const [receivers] = await promiseDb.query(`
       SELECT receiver_id, name, location, contact_info, 
              sufficiency, needs_description, priority
-      FROM Reciever
+      FROM receiver
       ORDER BY receiver_id
     `);
 
@@ -592,8 +592,8 @@ export const deleteReceiver = async (req, res) => {
       });
     }
 
-    // Delete only from Reciever (orphanages are separate)
-    await promiseDb.query("DELETE FROM Reciever WHERE receiver_id = ?", [id]);
+    // Delete only from receiver (orphanages are separate)
+    await promiseDb.query("DELETE FROM receiver WHERE receiver_id = ?", [id]);
 
     res.json({ success: true, message: "Receiver deleted" });
   } catch (error) {

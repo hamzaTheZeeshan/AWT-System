@@ -4,6 +4,7 @@ import "./HomePage.css";
 import DonationCharts from "../Donation/DonationCharts";
 import MyDonations from "../Donation/MyDonations";
 import CampaignsList from "../CampaignsList/CampaignsList";
+import OrphanagesList from "../OrphanagesList/OrphanagesList";
 
 const HomePage: React.FC = () => {
   const [scrolled, setScrolled] = useState(false);
@@ -196,6 +197,7 @@ const HomePage: React.FC = () => {
         <div className="awt-donation__widgets">
           <MyDonations />
           <CampaignsList />
+          <OrphanagesList/>
         </div>
       </section>
 

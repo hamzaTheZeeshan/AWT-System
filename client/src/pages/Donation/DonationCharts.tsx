@@ -22,6 +22,8 @@ interface PerTypeEntry {
 interface Totals {
   total_clothes_items: number;
   total_books_items: number;
+  total_campaign_amount: number;   // NEW: sum of donations linked to campaigns
+  total_orphanage_amount: number;  // NEW: sum of donations linked to orphanages
 }
 
 interface ChartEntry {
@@ -30,19 +32,19 @@ interface ChartEntry {
   color: string;
 }
 
-// Color map — money types get green shades, items keep their original colors
+// Color map — all five money/destination types
 const TYPE_COLORS: Record<string, string> = {
-  Money: "#2D4A3E",
-  Zakat: "#4a7c64",
-  Sadqah: "#7aab90",
-  Clothes: "#f0a055",
-  Books: "#e07070",
+  Money:     "#2D4A3E",   // deep forest green
+  Zakat:     "#4a7c64",   // mid green
+  Sadqah:    "#7aab90",   // sage
+  Campaigns: "#c47a30",   // warm amber
+  Orphanages:"#8b5cf6",   // violet
 };
 
 // Fallback for any unexpected type name
-const moneyColor = (name: string) =>
-  TYPE_COLORS[name] ?? "#2D4A3E";
+const moneyColor = (name: string) => TYPE_COLORS[name] ?? "#2D4A3E";
 
+/* ── Tooltips ─────────────────────────────────────────────────────────── */
 const CustomTooltip = ({ active, payload }: any) => {
   if (active && payload && payload.length) {
     const d = payload[0];
@@ -55,28 +57,6 @@ const CustomTooltip = ({ active, payload }: any) => {
             ? `${Number(d.value).toLocaleString()} items`
             : `PKR ${Number(d.value).toLocaleString()}`}
         </p>
-      </div>
-    );
-  }
-  return null;
-};
-
-const BarTooltip = ({ active, payload, label }: any) => {
-  if (active && payload && payload.length) {
-    return (
-      <div className="dc-tooltip">
-        <p className="dc-tooltip-label">{label}</p>
-        {payload.map((p: any) => {
-          const isItems = ["clothes", "books"].includes(p.dataKey);
-          return (
-            <p key={p.dataKey} className="dc-tooltip-value" style={{ color: p.fill }}>
-              {p.name}:{" "}
-              {isItems
-                ? `${Number(p.value).toLocaleString()} items`
-                : `PKR ${Number(p.value).toLocaleString()}`}
-            </p>
-          );
-        })}
       </div>
     );
   }
@@ -102,11 +82,12 @@ const renderCustomLabel = ({
   );
 };
 
+/* ── Component ────────────────────────────────────────────────────────── */
 const DonationCharts: React.FC = () => {
-  const [totals, setTotals] = useState<Totals | null>(null);
+  const [totals, setTotals]   = useState<Totals | null>(null);
   const [perType, setPerType] = useState<PerTypeEntry[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError]     = useState<string | null>(null);
 
   useEffect(() => {
     const fetchTotals = async () => {
@@ -147,38 +128,42 @@ const DonationCharts: React.FC = () => {
     );
   }
 
-  /* ── Derived data ───────────────────────────────────────── */
+  /* ── Derived data ───────────────────────────────────────────────────── */
 
-  // Money types from perType (Zakat, Sadqah, Khairat)
+  // Money types from perType (e.g. Money, Zakat, Sadqah)
   const moneyTypes = perType
-    .map((t) => ({ ...t, total_amount: Number(t.total_amount) }))  // ← add this line
+    .map((t) => ({ ...t, total_amount: Number(t.total_amount) }))
     .filter((t) => t.total_amount > 0);
-  const totalMoney = moneyTypes.reduce((sum, t) => sum + t.total_amount, 0);
 
-  // Bar chart: one row per money type + clothes + books
-  const barData = [
-    ...moneyTypes.map((t) => ({
-      category: t.type_name,
-      amount: t.total_amount,
-      isItems: false,
-      color: moneyColor(t.type_name),
-    }))
-  ].filter((d) => d.amount > 0);
+  // Campaign & Orphanage destination amounts (from totals)
+  const destinationTypes: { type_name: string; total_amount: number }[] = [
+    ...(totals.total_campaign_amount   > 0 ? [{ type_name: "Campaigns",   total_amount: Number(totals.total_campaign_amount)   }] : []),
+    ...(totals.total_orphanage_amount  > 0 ? [{ type_name: "Orphanages",  total_amount: Number(totals.total_orphanage_amount)  }] : []),
+  ];
 
-  // Pie chart entries
-  const pieData: ChartEntry[] = [
-    ...moneyTypes.map((t) => ({
-      name: t.type_name,
-      value: Number(t.total_amount),  // ← add Number()
-      color: moneyColor(t.type_name),
-    }))
-  ].filter((d) => d.value > 0);
+  // All five types for bar & pie charts
+  const allMoneyEntries = [...moneyTypes, ...destinationTypes];
+
+  const barData = allMoneyEntries.map((t) => ({
+    category: t.type_name,
+    amount:   t.total_amount,
+    color:    moneyColor(t.type_name),
+  }));
+
+  const pieData: ChartEntry[] = allMoneyEntries.map((t) => ({
+    name:  t.type_name,
+    value: t.total_amount,
+    color: moneyColor(t.type_name),
+  }));
 
   const grandTotal = pieData.reduce((sum, d) => sum + d.value, 0);
 
+  // Total stat cards = money types + campaigns + orphanages + clothes + books
+  const totalCols = allMoneyEntries.length + 2;
+
   return (
     <div className="dc-wrapper">
-      {/* Header */}
+      {/* ── Header ──────────────────────────────────────────────────── */}
       <div className="dc-header">
         <div className="dc-header-icon">A</div>
         <div>
@@ -188,8 +173,12 @@ const DonationCharts: React.FC = () => {
         </div>
       </div>
 
-      {/* Summary stats — money types + items */}
-      <div className="dc-stats" style={{ gridTemplateColumns: `repeat(${moneyTypes.length + 2}, 1fr)` }}>
+      {/* ── Summary stats ────────────────────────────────────────────── */}
+      <div
+        className="dc-stats"
+        style={{ gridTemplateColumns: `repeat(${totalCols}, 1fr)` }}
+      >
+        {/* Money-type cards (Money, Zakat, Sadqah) */}
         {moneyTypes.map((t) => (
           <div key={t.type_name} className="dc-stat-card">
             <span className="dc-stat-value" style={{ color: moneyColor(t.type_name) }}>
@@ -198,12 +187,36 @@ const DonationCharts: React.FC = () => {
             <span className="dc-stat-label">{t.type_name}</span>
           </div>
         ))}
+
+        {/* Campaigns card */}
+        {totals.total_campaign_amount > 0 && (
+          <div className="dc-stat-card">
+            <span className="dc-stat-value" style={{ color: TYPE_COLORS.Campaigns }}>
+              PKR {Number(totals.total_campaign_amount).toLocaleString()}
+            </span>
+            <span className="dc-stat-label">Campaigns</span>
+          </div>
+        )}
+
+        {/* Orphanages card */}
+        {totals.total_orphanage_amount > 0 && (
+          <div className="dc-stat-card">
+            <span className="dc-stat-value" style={{ color: TYPE_COLORS.Orphanages }}>
+              PKR {Number(totals.total_orphanage_amount).toLocaleString()}
+            </span>
+            <span className="dc-stat-label">Orphanages</span>
+          </div>
+        )}
+
+        {/* Clothes */}
         <div className="dc-stat-card">
           <span className="dc-stat-value dc-stat-clothes">
             {totals.total_clothes_items.toLocaleString()}
           </span>
           <span className="dc-stat-label">Clothes Items</span>
         </div>
+
+        {/* Books */}
         <div className="dc-stat-card">
           <span className="dc-stat-value dc-stat-books">
             {totals.total_books_items.toLocaleString()}
@@ -212,19 +225,19 @@ const DonationCharts: React.FC = () => {
         </div>
       </div>
 
-      {/* Charts grid */}
+      {/* ── Charts grid ──────────────────────────────────────────────── */}
       <div className="dc-charts-grid">
+
         {/* Bar chart */}
         <div className="dc-chart-card">
           <p className="dc-chart-title">Total Monetary Donations</p>
           <p className="dc-chart-sub">Approved amounts by category</p>
 
-          {/* Dynamic legend */}
           <div className="dc-bar-legend">
             {barData.map((d) => (
               <span key={d.category} className="dc-legend-item">
                 <span className="dc-legend-dot" style={{ background: d.color }} />
-                {d.category}{d.isItems ? " (items)" : " (PKR)"}
+                {d.category} (PKR)
               </span>
             ))}
           </div>
@@ -236,22 +249,27 @@ const DonationCharts: React.FC = () => {
               barCategoryGap="40%"
             >
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.07)" vertical={false} />
-              <XAxis dataKey="category" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
+              <XAxis
+                dataKey="category"
+                tick={{ fontSize: 10 }}
+                axisLine={false}
+                tickLine={false}
+              />
               <YAxis
-                tick={{ fontSize: 11 }} axisLine={false} tickLine={false} width={60}
+                tick={{ fontSize: 11 }}
+                axisLine={false}
+                tickLine={false}
+                width={60}
                 tickFormatter={(v) => v >= 1000 ? `${(v / 1000).toFixed(0)}k` : v}
               />
               <Tooltip
                 content={({ active, payload, label }) => {
                   if (!active || !payload?.length) return null;
-                  const entry = barData.find((d) => d.category === label);
                   return (
                     <div className="dc-tooltip">
                       <p className="dc-tooltip-label">{label}</p>
                       <p className="dc-tooltip-value">
-                        {entry?.isItems
-                          ? `${Number(payload[0].value).toLocaleString()} items`
-                          : `PKR ${Number(payload[0].value).toLocaleString()}`}
+                        PKR {Number(payload[0].value).toLocaleString()}
                       </p>
                     </div>
                   );
@@ -271,6 +289,7 @@ const DonationCharts: React.FC = () => {
         <div className="dc-chart-card">
           <p className="dc-chart-title">Distribution by Money Donated</p>
           <p className="dc-chart-sub">Share of each donation category</p>
+
           <ResponsiveContainer width="100%" height={260}>
             <PieChart>
               <Pie

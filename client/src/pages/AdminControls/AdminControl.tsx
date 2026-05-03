@@ -6,6 +6,7 @@ import Placeholder from "./Placeholder";
 import "./global.css";
 import ReceiversTable from "./ReceiversTable";
 import Campaigns from "./Campaigns";
+import OrphanagesTable from "./OrphanagesTable";
 
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState("users");
@@ -17,9 +18,11 @@ const App: React.FC = () => {
       case "donations":
         return <DonationsTable />;
       case "receivers":
-        return <ReceiversTable/>
+        return <ReceiversTable />
       case "campaigns":
-        return <Campaigns/>
+        return <Campaigns />
+      case "orphanages":
+        return <OrphanagesTable />
       default:
         return <UsersTable />;
     }

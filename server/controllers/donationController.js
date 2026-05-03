@@ -239,47 +239,82 @@ export const getMyDonations = async (req, res) => {
 // @desc    Get total donations (public)
 // @route   GET /api/donations/total
 // @access  Public
+// @desc    Get total donations (public)
+// @route   GET /api/donations/total
+// @access  Public
 export const getTotalDonations = async (req, res) => {
   try {
-    const promiseDb = db.promise();
+    const promiseDb = db.promise(); // ✅ Fix 1: use promiseDb consistently
 
-    const [perTypeResult] = await promiseDb.query(
-      `SELECT dt.type_name, 
-          COALESCE(SUM(d.amount), 0) as total_amount
-       FROM Donation_Type dt
-       LEFT JOIN Donation d ON dt.donation_type_id = d.donation_type_id 
-         AND d.status = 'approved'
-       GROUP BY dt.donation_type_id, dt.type_name`
-    );
+    // ── 1. Per-type monetary totals (Money, Zakat, Sadqah, etc.) ──────────
+    const [perTypeRows] = await promiseDb.query(`
+      SELECT
+        dt.type_name,
+        COALESCE(SUM(d.amount), 0) AS total_amount
+      FROM Donation_Type dt
+      LEFT JOIN Donation d
+        ON d.donation_type_id = dt.donation_type_id
+        AND d.status = 'Approved'
+        AND d.amount IS NOT NULL
+      GROUP BY dt.donation_type_id, dt.type_name
+      HAVING total_amount > 0
+      ORDER BY total_amount DESC
+    `);
 
-    const [clothesResult] = await promiseDb.query(
-      `SELECT SUM(quantity) as total_items 
-       FROM Clothes c
-       JOIN Donation d ON c.donation_id = d.donation_id
-       WHERE d.status = 'approved'`
-    );
+    // ── 2. Clothes & Books item counts ────────────────────────────────────
+    // ✅ Fix 2: query the actual Clothes/Books tables, not Donation columns
+    const [[itemTotals]] = await promiseDb.query(`
+      SELECT
+        COALESCE((
+          SELECT SUM(c.quantity)
+          FROM Clothes c
+          JOIN Donation d ON c.donation_id = d.donation_id
+          WHERE d.status = 'Approved'
+        ), 0) AS total_clothes_items,
+        COALESCE((
+          SELECT SUM(b.quantity)
+          FROM Books b
+          JOIN Donation d ON b.donation_id = d.donation_id
+          WHERE d.status = 'Approved'
+        ), 0) AS total_books_items
+    `);
 
-    const [booksResult] = await promiseDb.query(
-      `SELECT SUM(quantity) as total_items 
-       FROM Books b
-       JOIN Donation d ON b.donation_id = d.donation_id
-       WHERE d.status = 'approved'`
-    );
+    // ── 3. Campaign donations total ───────────────────────────────────────
+    const [[campaignTotals]] = await promiseDb.query(`
+      SELECT COALESCE(SUM(amount), 0) AS total_campaign_amount
+      FROM Donation
+      WHERE status = 'Approved'
+        AND campaign_id IS NOT NULL
+        AND amount IS NOT NULL
+    `);
 
-    res.json({
-      success: true,
+    // ── 4. Orphanage donations total ──────────────────────────────────────
+    const [[orphanageTotals]] = await promiseDb.query(`
+      SELECT COALESCE(SUM(amount), 0) AS total_orphanage_amount
+      FROM Donation
+      WHERE status = 'Approved'
+        AND orphanage_id IS NOT NULL
+        AND amount IS NOT NULL
+    `);
+
+    return res.json({
       totals: {
-        total_clothes_items: clothesResult[0].total_items || 0,
-        total_books_items: booksResult[0].total_items || 0,
+        total_clothes_items:   Number(itemTotals.total_clothes_items),
+        total_books_items:     Number(itemTotals.total_books_items),
+        total_campaign_amount: Number(campaignTotals.total_campaign_amount),
+        total_orphanage_amount: Number(orphanageTotals.total_orphanage_amount),
       },
-      perType: perTypeResult,
+      perType: perTypeRows.map((r) => ({
+        type_name:    r.type_name,
+        total_amount: Number(r.total_amount),
+      })),
     });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ success: false, message: "Server error" });
-  }
-};
 
+  } catch (err) {
+    console.error("donations/total error:", err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+}; 
 // @desc    Track individual donation record
 // @route   GET /api/donations/:id
 // @access  Private (owner or admin)

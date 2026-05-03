@@ -1,10 +1,12 @@
-create database awtDb;
-use awtDb;
+CREATE DATABASE awtDb;
+USE awtDb;
 
+-- =========================
+-- 1. Independent Tables
+-- =========================
 
--- 1. Create independent tables first
 CREATE TABLE Users (
-    user_id INT PRIMARY KEY,
+    user_id INT PRIMARY KEY AUTO_INCREMENT,
     name VARCHAR(255),
     email VARCHAR(255) UNIQUE,
     password VARCHAR(255),
@@ -18,111 +20,32 @@ CREATE TABLE Donation_Type (
 );
 
 CREATE TABLE Campaign (
-    campaign_id INT PRIMARY KEY,
+    campaign_id INT PRIMARY KEY AUTO_INCREMENT,
     title VARCHAR(255),
     description TEXT,
-    target_amount DECIMAL(15, 2),
+    target_amount DECIMAL(15,2),
+    amount_raised DECIMAL(15,2) DEFAULT 0,
     end_date DATE
 );
 
 CREATE TABLE Intern (
-    intern_id INT PRIMARY KEY,
+    intern_id INT PRIMARY KEY AUTO_INCREMENT,
     name VARCHAR(255),
     role VARCHAR(100),
     assigned_task TEXT,
     end_date DATE
 );
 
-CREATE TABLE receiver (
-    receiver_id INT PRIMARY KEY,
-    name VARCHAR(255),
-    location VARCHAR(255),
-    contact_info VARCHAR(255)
-);
-
--- 2. Create tables with dependencies (Foreign Keys)
-CREATE TABLE Donation (
-    donation_id INT PRIMARY KEY,
-    user_id INT,
-    campaign_id INT,
-    donation_type_id INT,
-    date DATE,
-    amount DECIMAL(15, 2),
-    status VARCHAR(50),
-    FOREIGN KEY (user_id) REFERENCES Users(user_id),
-    FOREIGN KEY (campaign_id) REFERENCES Campaign(campaign_id),
-    FOREIGN KEY (donation_type_id) REFERENCES Donation_Type(donation_type_id)
-);
-
--- 3. Create specialized/sub-type tables
-CREATE TABLE Clothes (
-    cloth_id INT PRIMARY KEY,
-    donation_id INT,
-    type VARCHAR(100),
-    size VARCHAR(50),
-    conditionOfCloth VARCHAR(100),
-	description TEXT,
-    quantity INT,
-    FOREIGN KEY (donation_id) REFERENCES Donation(donation_id)
-);
-
-
-
-CREATE TABLE Books (
-    book_id INT PRIMARY KEY,
-    donation_id INT,
-    title VARCHAR(255),
-    author VARCHAR(100),
-    conditionOfBook VARCHAR(100),
-	description TEXT,
-    quantity INT,
-    FOREIGN KEY (donation_id) REFERENCES Donation(donation_id)
-);
-CREATE TABLE Orphanage (
-    receiver_id INT PRIMARY KEY,
+CREATE TABLE Receiver (
+    receiver_id INT PRIMARY KEY AUTO_INCREMENT,
     name VARCHAR(255),
     location VARCHAR(255),
     contact_info VARCHAR(255),
-    FOREIGN KEY (receiver_id) REFERENCES receiver(receiver_id)
+    sufficiency ENUM('self_sufficient', 'not_self_sufficient') DEFAULT 'not_self_sufficient',
+    needs_description TEXT,
+    priority ENUM('high', 'medium', 'low') DEFAULT 'medium'
 );
 
-CREATE TABLE Distribution (
-    distribution_id INT PRIMARY KEY,
-    donation_id INT,
-    receiver_id INT,
-    date DATE,
-    quantity INT,
-    FOREIGN KEY (donation_id) REFERENCES Donation(donation_id),
-    FOREIGN KEY (receiver_id) REFERENCES receiver(receiver_id)
-);
-
-
-insert into Donation_Type (donation_type_id, type_name)
-values (1, "Money"),
-(2, "Zakat"),
- (3, "Sadqah"),
-(4, "Clothes"),
-(5, "Books");
-
-ALTER TABLE Campaign ADD COLUMN amount_raised DECIMAL(15,2) DEFAULT 0;
-ALTER TABLE Donation ADD COLUMN receiver_id INT;
-ALTER TABLE Donation ADD FOREIGN KEY (receiver_id) REFERENCES receiver(receiver_id);
-
-ALTER TABLE receiver ADD COLUMN sufficiency ENUM('self_sufficient', 'not_self_sufficient') DEFAULT 'not_self_sufficient';
-
-ALTER TABLE receiver 
-ADD COLUMN needs_description TEXT,
-ADD COLUMN priority ENUM('high', 'medium', 'low') DEFAULT 'medium';
-
-
-select * from campaign;
-
-----------new changes --------------------------------------------------------
-
--- 2. Drop the old Orphanage table
-DROP TABLE IF EXISTS Orphanage;
-
--- 3. Create new Orphanage table with independent primary key
 CREATE TABLE Orphanage (
     orphanage_id INT PRIMARY KEY AUTO_INCREMENT,
     name VARCHAR(255) NOT NULL,
@@ -130,14 +53,75 @@ CREATE TABLE Orphanage (
     contact_info VARCHAR(255)
 );
 
--- 4. Add orphanage_id to Donation (if not already present)
-ALTER TABLE Donation ADD COLUMN orphanage_id INT;
-ALTER TABLE Donation ADD FOREIGN KEY (orphanage_id) REFERENCES Orphanage(orphanage_id);
+-- =========================
+-- 2. Dependent Tables
+-- =========================
 
--- 5. Add orphanage_id to Distribution (if not already present)
-ALTER TABLE Distribution ADD COLUMN orphanage_id INT;
-ALTER TABLE Distribution ADD FOREIGN KEY (orphanage_id) REFERENCES Orphanage(orphanage_id);
+CREATE TABLE Donation (
+    donation_id INT PRIMARY KEY AUTO_INCREMENT,
+    user_id INT,
+    campaign_id INT,
+    donation_type_id INT,
+    orphanage_id INT,
+    date DATE,
+    amount DECIMAL(15,2),
+    status VARCHAR(50),
+
+    FOREIGN KEY (user_id) REFERENCES Users(user_id),
+    FOREIGN KEY (campaign_id) REFERENCES Campaign(campaign_id),
+    FOREIGN KEY (donation_type_id) REFERENCES Donation_Type(donation_type_id),
+    FOREIGN KEY (orphanage_id) REFERENCES Orphanage(orphanage_id)
+);
+
+CREATE TABLE Clothes (
+    cloth_id INT PRIMARY KEY AUTO_INCREMENT,
+    donation_id INT,
+    type VARCHAR(100),
+    size VARCHAR(50),
+    conditionOfCloth VARCHAR(100),
+    description TEXT,
+    quantity INT,
+
+    FOREIGN KEY (donation_id) REFERENCES Donation(donation_id)
+);
+
+CREATE TABLE Books (
+    book_id INT PRIMARY KEY AUTO_INCREMENT,
+    donation_id INT,
+    title VARCHAR(255),
+    author VARCHAR(100),
+    conditionOfBook VARCHAR(100),
+    description TEXT,
+    quantity INT,
+
+    FOREIGN KEY (donation_id) REFERENCES Donation(donation_id)
+);
 
 
-ALTER TABLE Donation DROP FOREIGN KEY donation_ibfk_4;
-ALTER TABLE Donation DROP COLUMN receiver_id;
+CREATE TABLE Distribution (
+    distribution_id INT PRIMARY KEY AUTO_INCREMENT,
+    donation_id INT,
+    receiver_id INT,
+    orphanage_id INT,
+    date DATE,
+    quantity INT,
+
+    FOREIGN KEY (donation_id) REFERENCES Donation(donation_id),
+    FOREIGN KEY (receiver_id) REFERENCES Receiver(receiver_id),
+    FOREIGN KEY (orphanage_id) REFERENCES Orphanage(orphanage_id)
+);
+
+-- =========================
+-- 3. Insert Default Donation Types
+-- =========================
+
+INSERT INTO Donation_Type (donation_type_id, type_name)
+VALUES
+(1, 'Money'),
+(2, 'Zakat'),
+(3, 'Sadqah'),
+(4, 'Clothes'),
+(5, 'Books');
+
+select * from users;
+update users set role = 'admin' where user_id = 2;

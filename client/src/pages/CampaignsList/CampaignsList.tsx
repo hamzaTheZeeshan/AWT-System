@@ -82,7 +82,7 @@ const CampaignsList: React.FC = () => {
 
     setDonating(true);
     try {
-      const res = await fetch(`${BASE_URL}/donations/create-donation`, {
+      const res = await fetch(`${BASE_URL}/donations/create`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
