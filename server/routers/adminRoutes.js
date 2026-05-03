@@ -32,6 +32,12 @@ import {
 } from "../controllers/adminController.js";
 const router = express.Router();
 
+import {
+  getAllOrphanages,
+  updateOrphanage,
+  deleteOrphanage
+} from "../controllers/adminController.js";
+
 // All admin routes require authentication AND admin role
 router.use(protect, admin);
 
@@ -57,6 +63,9 @@ router.post("/receivers", createReceiver);
 router.delete("/receivers/:id", deleteReceiver);
 
 router.post("/orphanages", createOrphanage);
+router.get("/orphanages", getAllOrphanages);
+router.put("/orphanages/:id", updateOrphanage);
+router.delete("/orphanages/:id", deleteOrphanage);
 
 router.get("/interns", getAllInterns);
 router.post("/interns", createIntern);

@@ -516,16 +516,16 @@ export const getAllCampaigns = async (req, res) => {
 // @desc    Get all receivers (with orphanage flag)
 // @desc    Get all receivers (with orphanage flag and sufficiency)
 // @desc    Get all receivers (with orphanage flag and sufficiency)
+// @desc    Get all receivers (general receivers only – not orphanages)
+// @route   GET /api/admin/receivers
 export const getAllReceivers = async (req, res) => {
   try {
     const promiseDb = db.promise();
     const [receivers] = await promiseDb.query(`
-      SELECT r.receiver_id, r.name, r.location, r.contact_info, 
-             r.sufficiency, r.needs_description, r.priority,
-             CASE WHEN o.receiver_id IS NOT NULL THEN 1 ELSE 0 END as is_orphanage
-      FROM Reciever r
-      LEFT JOIN Orphanage o ON r.receiver_id = o.receiver_id
-      ORDER BY r.receiver_id
+      SELECT receiver_id, name, location, contact_info, 
+             sufficiency, needs_description, priority
+      FROM Reciever
+      ORDER BY receiver_id
     `);
     res.json({ success: true, receivers });
   } catch (error) {
@@ -578,22 +578,22 @@ export const deleteReceiver = async (req, res) => {
   try {
     const { id } = req.params;
     const promiseDb = db.promise();
-    // Check if receiver has distributions
+
+    // Check if receiver has any distributions
     const [dist] = await promiseDb.query(
       "SELECT * FROM Distribution WHERE receiver_id = ?",
       [id],
     );
     if (dist.length > 0) {
-      return res
-        .status(400)
-        .json({
-          success: false,
-          message: "Cannot delete: receiver has distributions",
-        });
+      return res.status(400).json({
+        success: false,
+        message: "Cannot delete: receiver has distributions",
+      });
     }
-    // Also delete from Orphanage if exists
-    await promiseDb.query("DELETE FROM Orphanage WHERE receiver_id = ?", [id]);
+
+    // Delete only from Reciever (orphanages are separate)
     await promiseDb.query("DELETE FROM Reciever WHERE receiver_id = ?", [id]);
+
     res.json({ success: true, message: "Receiver deleted" });
   } catch (error) {
     console.error(error);
@@ -691,6 +691,64 @@ export const deleteIntern = async (req, res) => {
     const promiseDb = db.promise();
     await promiseDb.query("DELETE FROM Intern WHERE intern_id = ?", [id]);
     res.json({ success: true, message: "Intern deleted" });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+};
+
+// @desc    Get all orphanages (admin only)
+// @route   GET /api/admin/orphanages
+export const getAllOrphanages = async (req, res) => {
+  try {
+    const promiseDb = db.promise();
+    const [orphanages] = await promiseDb.query(
+      "SELECT orphanage_id, name, location, contact_info FROM Orphanage ORDER BY name"
+    );
+    res.json({ success: true, orphanages });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+};
+
+// @desc    Update orphanage (admin only)
+// @route   PUT /api/admin/orphanages/:id
+export const updateOrphanage = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name, location, contact_info } = req.body;
+    const promiseDb = db.promise();
+    await promiseDb.query(
+      "UPDATE Orphanage SET name = ?, location = ?, contact_info = ? WHERE orphanage_id = ?",
+      [name, location, contact_info, id]
+    );
+    res.json({ success: true, message: "Orphanage updated" });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+};
+
+// @desc    Delete orphanage (admin only)
+// @route   DELETE /api/admin/orphanages/:id
+export const deleteOrphanage = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const promiseDb = db.promise();
+    // Check if orphanage has distributions
+    const [dist] = await promiseDb.query(
+      "SELECT * FROM Distribution WHERE orphanage_id = ?",
+      [id]
+    );
+    if (dist.length > 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Cannot delete orphanage with existing distributions. Transfer or remove distributions first."
+      });
+    }
+    await promiseDb.query("DELETE FROM Orphanage WHERE orphanage_id = ?", [id]);
+    res.json({ success: true, message: "Orphanage deleted" });
   } catch (error) {
     console.error(error);
     res.status(500).json({ success: false, message: "Server error" });
