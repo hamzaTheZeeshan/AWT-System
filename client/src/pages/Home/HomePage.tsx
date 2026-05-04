@@ -157,7 +157,7 @@ const HomePage: React.FC = () => {
               icon: "🤝",
               title: "Work With Us",
               desc: "Volunteer at Alamgir Welfare Trust and do your part in serving the society.",
-              path: "/contact",
+              path: "/interns",
             },
             {
               icon: "💵",
