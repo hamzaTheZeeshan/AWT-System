@@ -296,72 +296,50 @@ export const createDistribution = async (req, res) => {
     const { donation_id, receiver_id, orphanage_id, quantity } = req.body;
     const promiseDb = db.promise();
 
-    // 1. Check if donation exists and is approved
+    // 1. Check if donation exists and is approved or partially_distributed
     const [donation] = await promiseDb.query(
-      'SELECT * FROM Donation WHERE donation_id = ? AND status = "approved"',
+      'SELECT * FROM Donation WHERE donation_id = ? AND status IN ("approved", "partially_distributed")',
       [donation_id],
     );
     if (donation.length === 0) {
       return res.status(404).json({
         success: false,
-        message: "Approved donation not found",
-      });
-    }
-
-    // 2. Validate that exactly one destination is provided
-    if ((receiver_id && orphanage_id) || (!receiver_id && !orphanage_id)) {
-      return res.status(400).json({
-        success: false,
         message:
-          "Provide either receiver_id (for general receiver) or orphanage_id (for orphanage), not both, not none.",
+          "Donation not found or not in a distributable state (must be approved or partially_distributed)",
       });
     }
 
-    // 3. Validate the destination exists
-    if (receiver_id) {
-      // NOTE: Table name in DB is 'receiver' (typo) — update here if you fix the schema
-      const [receiver] = await promiseDb.query(
-        "SELECT * FROM receiver WHERE receiver_id = ?",
-        [receiver_id],
-      );
-      if (receiver.length === 0) {
-        return res
-          .status(404)
-          .json({ success: false, message: "Receiver not found" });
-      }
-    }
-    if (orphanage_id) {
-      const [orphanage] = await promiseDb.query(
-        "SELECT * FROM Orphanage WHERE orphanage_id = ?",
-        [orphanage_id],
-      );
-      if (orphanage.length === 0) {
-        return res
-          .status(404)
-          .json({ success: false, message: "Orphanage not found" });
-      }
-    }
-
-    // 4. Check available quantity
+    const donationData = donation[0];
     let availableQty = null;
-    const donationTypeId = donation[0].donation_type_id;
+    const isMoneyDonation = [1, 2, 3].includes(donationData.donation_type_id);
 
-    if (donationTypeId === 4) {
+    // 2. Calculate available quantity
+    if (isMoneyDonation) {
+      availableQty = donationData.remaining_amount || 0;
+    } else if (donationData.donation_type_id === 4) {
+      // Clothes
       const [clothes] = await promiseDb.query(
         "SELECT SUM(quantity) as total FROM Clothes WHERE donation_id = ?",
         [donation_id],
       );
       availableQty = clothes[0].total || 0;
-    } else if (donationTypeId === 5) {
+    } else if (donationData.donation_type_id === 5) {
+      // Books
       const [books] = await promiseDb.query(
         "SELECT SUM(quantity) as total FROM Books WHERE donation_id = ?",
         [donation_id],
       );
       availableQty = books[0].total || 0;
-    } else {
-      availableQty = donation[0].amount || 0;
     }
 
+    if (!availableQty || availableQty <= 0) {
+      return res
+        .status(400)
+        .json({
+          success: false,
+          message: "No remaining quantity to distribute",
+        });
+    }
     if (quantity > availableQty) {
       return res.status(400).json({
         success: false,
@@ -369,18 +347,65 @@ export const createDistribution = async (req, res) => {
       });
     }
 
-    // 5. Insert distribution — AUTO_INCREMENT handles distribution_id
+    // 3. Validate destination (receiver or orphanage)
+    if ((receiver_id && orphanage_id) || (!receiver_id && !orphanage_id)) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "Provide either receiver_id or orphanage_id, not both, not none.",
+      });
+    }
+
+    if (receiver_id) {
+      // ✅ Table name corrected to 'Reciever'
+      const [receiver] = await promiseDb.query(
+        "SELECT * FROM Reciever WHERE receiver_id = ?",
+        [receiver_id],
+      );
+      if (receiver.length === 0)
+        return res
+          .status(404)
+          .json({ success: false, message: "Receiver not found" });
+    }
+    if (orphanage_id) {
+      const [orphanage] = await promiseDb.query(
+        "SELECT * FROM Orphanage WHERE orphanage_id = ?",
+        [orphanage_id],
+      );
+      if (orphanage.length === 0)
+        return res
+          .status(404)
+          .json({ success: false, message: "Orphanage not found" });
+    }
+
+    // 4. Insert distribution – AUTO_INCREMENT handles distribution_id
     const [result] = await promiseDb.query(
       `INSERT INTO Distribution (donation_id, receiver_id, orphanage_id, date, quantity)
        VALUES (?, ?, ?, CURDATE(), ?)`,
       [donation_id, receiver_id || null, orphanage_id || null, quantity],
     );
 
-    // 6. Update donation status to distributed
-    await promiseDb.query(
-      'UPDATE Donation SET status = "distributed" WHERE donation_id = ?',
-      [donation_id],
-    );
+    // 5. Update remaining amount / quantity
+    if (isMoneyDonation) {
+      const newRemaining = donationData.remaining_amount - quantity;
+      if (newRemaining <= 0) {
+        await promiseDb.query(
+          'UPDATE Donation SET remaining_amount = 0, status = "distributed" WHERE donation_id = ?',
+          [donation_id],
+        );
+      } else {
+        await promiseDb.query(
+          'UPDATE Donation SET remaining_amount = ?, status = "partially_distributed" WHERE donation_id = ?',
+          [newRemaining, donation_id],
+        );
+      }
+    } else {
+      // For clothes/books, mark donation as distributed (full distribution assumed)
+      await promiseDb.query(
+        'UPDATE Donation SET status = "distributed" WHERE donation_id = ?',
+        [donation_id],
+      );
+    }
 
     res.status(201).json({
       success: true,
@@ -399,20 +424,18 @@ export const createDistribution = async (req, res) => {
 export const getAllDistributions = async (req, res) => {
   try {
     const promiseDb = db.promise();
-
     const [distributions] = await promiseDb.query(`
-      SELECT dist.*, 
+      SELECT dist.*,
              COALESCE(r.name, o.name) as receiver_name,
-             CASE 
+             CASE
                WHEN dist.receiver_id IS NOT NULL THEN 'general'
                WHEN dist.orphanage_id IS NOT NULL THEN 'orphanage'
              END as receiver_type
       FROM Distribution dist
-      LEFT JOIN receiver r ON dist.receiver_id = r.receiver_id
+      LEFT JOIN Reciever r ON dist.receiver_id = r.receiver_id   -- ✅ corrected table name
       LEFT JOIN Orphanage o ON dist.orphanage_id = o.orphanage_id
       ORDER BY dist.date DESC
     `);
-
     res.json({ success: true, count: distributions.length, distributions });
   } catch (error) {
     console.error(error);
@@ -427,18 +450,17 @@ export const createCampaign = async (req, res) => {
   try {
     const { title, description, target_amount, end_date } = req.body;
     const promiseDb = db.promise();
-
-    // AUTO_INCREMENT handles campaign_id
-    const [result] = await promiseDb.query(
-      "INSERT INTO Campaign (title, description, target_amount, end_date) VALUES (?, ?, ?, ?)",
-      [title, description, target_amount, end_date],
+    const [maxId] = await promiseDb.query(
+      "SELECT MAX(campaign_id) as maxId FROM Campaign",
     );
-
-    res.status(201).json({
-      success: true,
-      message: "Campaign created",
-      campaign_id: result.insertId,
-    });
+    const campaign_id = (maxId[0].maxId || 0) + 1;
+    await promiseDb.query(
+      "INSERT INTO Campaign (campaign_id, title, description, target_amount, end_date) VALUES (?, ?, ?, ?, ?)",
+      [campaign_id, title, description, target_amount, end_date],
+    );
+    res
+      .status(201)
+      .json({ success: true, message: "Campaign created", campaign_id });
   } catch (error) {
     console.error(error);
     res.status(500).json({ success: false, message: "Server error" });
@@ -522,15 +544,11 @@ export const getAllCampaigns = async (req, res) => {
 export const getAllReceivers = async (req, res) => {
   try {
     const promiseDb = db.promise();
-
-    // NOTE: Table is named 'receiver' in the DB schema (typo preserved)
     const [receivers] = await promiseDb.query(`
-      SELECT receiver_id, name, location, contact_info, 
-             sufficiency, needs_description, priority
-      FROM receiver
+      SELECT receiver_id, name, location, contact_info, sufficiency, needs_description, priority
+      FROM Reciever   -- ✅ corrected table name
       ORDER BY receiver_id
     `);
-
     res.json({ success: true, count: receivers.length, receivers });
   } catch (error) {
     console.error(error);
@@ -552,10 +570,9 @@ export const createReceiver = async (req, res) => {
       priority,
     } = req.body;
     const promiseDb = db.promise();
-
-    // AUTO_INCREMENT handles receiver_id
+    // ✅ Table name corrected
     const [result] = await promiseDb.query(
-      `INSERT INTO receiver (name, location, contact_info, sufficiency, needs_description, priority) 
+      `INSERT INTO Reciever (name, location, contact_info, sufficiency, needs_description, priority)
        VALUES (?, ?, ?, ?, ?, ?)`,
       [
         name,
@@ -566,12 +583,13 @@ export const createReceiver = async (req, res) => {
         priority || "medium",
       ],
     );
-
-    res.status(201).json({
-      success: true,
-      message: "Receiver created",
-      receiver_id: result.insertId,
-    });
+    res
+      .status(201)
+      .json({
+        success: true,
+        message: "Receiver created",
+        receiver_id: result.insertId,
+      });
   } catch (error) {
     console.error(error);
     res.status(500).json({ success: false, message: "Server error" });
@@ -586,21 +604,20 @@ export const deleteReceiver = async (req, res) => {
     const { id } = req.params;
     const promiseDb = db.promise();
 
-    // Check if receiver has any distributions
     const [dist] = await promiseDb.query(
       "SELECT * FROM Distribution WHERE receiver_id = ?",
       [id],
     );
     if (dist.length > 0) {
-      return res.status(400).json({
-        success: false,
-        message: "Cannot delete: receiver has distributions",
-      });
+      return res
+        .status(400)
+        .json({
+          success: false,
+          message: "Cannot delete: receiver has distributions",
+        });
     }
-
-    // Delete only from receiver (orphanages are separate)
-    await promiseDb.query("DELETE FROM receiver WHERE receiver_id = ?", [id]);
-
+    // ✅ Corrected table name
+    await promiseDb.query("DELETE FROM Reciever WHERE receiver_id = ?", [id]);
     res.json({ success: true, message: "Receiver deleted" });
   } catch (error) {
     console.error(error);

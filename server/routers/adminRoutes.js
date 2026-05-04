@@ -24,6 +24,12 @@ import {
 } from "../controllers/adminController.js";
 
 import {
+  // ... other imports
+  createDistribution,
+  getAllDistributions,
+} from "../controllers/adminController.js";
+
+import {
   // ... existing imports ...
   getAllInterns,
   createIntern,
@@ -69,6 +75,10 @@ router.post("/orphanages", createOrphanage);
 router.get("/orphanages", getAllOrphanages);
 router.put("/orphanages/:id", updateOrphanage);
 router.delete("/orphanages/:id", deleteOrphanage);
+
+// Distribution management
+router.post('/distribution', createDistribution);   // ✅ this one is missing
+router.get('/distributions', getAllDistributions);
 
 router.get("/interns", getAllInterns);
 router.post("/interns", createIntern);

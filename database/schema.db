@@ -130,3 +130,29 @@ VALUES
 
 select * from users;
 update users set role = 'admin' where user_id = 2;
+
+
+
+----------new changes------------
+-- Add remaining_amount to Donation table (for money donations)
+ALTER TABLE Donation ADD COLUMN remaining_amount DECIMAL(15,2) DEFAULT 0;
+
+-- Update existing approved money donations: set remaining_amount = amount
+UPDATE Donation 
+SET remaining_amount = amount 
+WHERE donation_type_id IN (1,2,3) AND status IN ('approved', 'distributed');
+
+ALTER TABLE Donation MODIFY COLUMN status ENUM('pending','approved','rejected','distributed','partially_distributed') DEFAULT 'pending';
+
+ALTER TABLE Distribution MODIFY distribution_id INT NOT NULL AUTO_INCREMENT;
+
+ALTER TABLE Reciever MODIFY receiver_id INT NOT NULL AUTO_INCREMENT;
+
+-- 1. Drop the foreign key that links Distribution to Reciever
+ALTER TABLE Distribution DROP FOREIGN KEY distribution_ibfk_2;
+
+-- 2. Make receiver_id auto-increment
+ALTER TABLE Reciever MODIFY receiver_id INT NOT NULL AUTO_INCREMENT;
+
+-- 3. Re-add the foreign key
+ALTER TABLE Distribution ADD FOREIGN KEY (receiver_id) REFERENCES Reciever(receiver_id);

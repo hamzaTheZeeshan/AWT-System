@@ -118,9 +118,15 @@ export const createDonation = async (req, res) => {
     const donation_id = await getNextId("Donation", "donation_id");
 
     // --- 4. Insert into Donation table ---
+    // For money types (1,2,3)
+    // Determine remaining_amount: for money types (1,2,3) use amount, else null
+    const remainingAmount = [1, 2, 3].includes(donation_type_id)
+      ? amount
+      : null;
+
     await promiseDb.query(
-      `INSERT INTO Donation (donation_id, user_id, campaign_id, orphanage_id, donation_type_id, date, amount, status) 
-       VALUES (?, ?, ?, ?, ?, CURDATE(), ?, 'pending')`,
+      `INSERT INTO Donation (donation_id, user_id, campaign_id, orphanage_id, donation_type_id, date, amount, remaining_amount, status) 
+   VALUES (?, ?, ?, ?, ?, CURDATE(), ?, ?, 'pending')`,
       [
         donation_id,
         user_id,
@@ -128,6 +134,7 @@ export const createDonation = async (req, res) => {
         orphanage_id || null,
         donation_type_id,
         amount || null,
+        remainingAmount,
       ],
     );
 
@@ -199,18 +206,18 @@ export const createDonation = async (req, res) => {
 
       // Donor info for the receipt PDF
       donor: {
-        name:  currentUser?.name  || null,
+        name: currentUser?.name || null,
         email: currentUser?.email || null,
         phone: currentUser?.phone || null,
       },
 
       // Confirmed donation data for the receipt PDF
       donation: {
-        id:               donation_id,
+        id: donation_id,
         donation_type_id: donation_type_id,
-        amount:           amount || null,
-        items:            items  || [],
-        created_at:       new Date().toISOString(),
+        amount: amount || null,
+        items: items || [],
+        created_at: new Date().toISOString(),
       },
 
       // Keep these for backwards compatibility
