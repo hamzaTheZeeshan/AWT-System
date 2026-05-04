@@ -10,12 +10,45 @@ const ContactPage: React.FC = () => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = (e: React.MouseEvent) => {
-    e.preventDefault();
-    if (!form.name || !form.email || !form.message) return;
-    // Wire to your API here
-    setSubmitted(true);
-  };
+  const handleSubmit = async (e: React.MouseEvent) => {
+  e.preventDefault();
+
+  if (!form.name || !form.email || !form.message) return;
+
+  try {
+    const response = await fetch("http://localhost:5000/api/contact", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        fullName: form.name,
+        email: form.email,
+        phone: form.phone,
+        message: form.message
+      })
+    });
+
+    const data = await response.json();
+
+    if (response.ok) {
+      setSubmitted(true);
+
+      setForm({
+        name: "",
+        email: "",
+        phone: "",
+        message: ""
+      });
+    } else {
+      alert(data.error);
+    }
+
+  } catch (error) {
+    console.log(error);
+    alert("Failed to send message");
+  }
+};
 
   return (
     <div className="contact-root">

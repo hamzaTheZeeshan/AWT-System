@@ -8,7 +8,7 @@ import donationRoutes from "./routers/donationRoutes.js";
 import adminRoutes from "./routers/adminRoutes.js";
 import campaignRoutes from "./routers/campaignRoutes.js";
 import orphanageRoutes from "./routers/orphanageRoutes.js";
-
+import contactRoutes from "./routers/contactRoutes.js";
 
 
 const app = express();
@@ -30,6 +30,7 @@ app.use("/api/donations", donationRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/campaigns", campaignRoutes);
 app.use("/api/orphanages", orphanageRoutes);
+app.use("/api/contact", contactRoutes);
 
 const PORT = 5000;
 app.listen(PORT, () => {

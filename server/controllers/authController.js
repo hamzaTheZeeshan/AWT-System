@@ -1,55 +1,56 @@
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
-import db from "../db.js"; // This will now work
-// import dotenv from "dotenv";
+import db from "../db.js";
+import dotenv from "dotenv";
 
-// dotenv.config();
-const JWT_SECRET = "my_secret_key_2026";
-// console.log("JWT_SECRET from env:", process.env.JWT_SECRET);
-// Since you're using createConnection (not pool), we need to use promise wrapper
-// Or use db.promise() for async/await
+dotenv.config();
+
+// get secret from env
+const JWT_SECRET = process.env.JWT_SECRET;
+
+// DB promise wrapper
+const promiseDb = db.promise();
 
 export const register = async (req, res) => {
   try {
     const { name, email, password, phone, role } = req.body;
 
-    // Use promise wrapper for async/await
-    const promiseDb = db.promise();
-
     const [existing] = await promiseDb.query(
       "SELECT * FROM Users WHERE email = ?",
-      [email],
+      [email]
     );
+
     if (existing.length > 0) {
-      return res
-        .status(400)
-        .json({ success: false, message: "User already exists" });
+      return res.status(400).json({
+        success: false,
+        message: "User already exists",
+      });
     }
 
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
-    // Get next user_id
     const [maxIdResult] = await promiseDb.query(
-      "SELECT MAX(user_id) as maxId FROM Users",
+      "SELECT MAX(user_id) as maxId FROM Users"
     );
+
     const user_id = (maxIdResult[0].maxId || 0) + 1;
 
     await promiseDb.query(
       "INSERT INTO Users (user_id, name, email, password, phone, role) VALUES (?, ?, ?, ?, ?, ?)",
-      [user_id, name, email, hashedPassword, phone || null, role || "general"],
+      [user_id, name, email, hashedPassword, phone || null, role || "general"]
     );
 
     const token = jwt.sign(
       { user_id, email, role: role || "general" },
       JWT_SECRET,
-      { expiresIn: "7d" },
+      { expiresIn: "7d" }
     );
 
     res.status(201).json({
       success: true,
       token,
-      user: { user_id, name, email, role: role || "donor" },
+      user: { user_id, name, email, role: role || "general" },
     });
   } catch (error) {
     console.error(error);
@@ -61,31 +62,33 @@ export const login = async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    const promiseDb = db.promise();
-
     const [users] = await promiseDb.query(
       "SELECT * FROM Users WHERE email = ?",
-      [email],
+      [email]
     );
+
     if (users.length === 0) {
-      return res
-        .status(401)
-        .json({ success: false, message: "Invalid credentials" });
+      return res.status(401).json({
+        success: false,
+        message: "Invalid credentials",
+      });
     }
 
     const user = users[0];
 
     const isMatch = await bcrypt.compare(password, user.password);
+
     if (!isMatch) {
-      return res
-        .status(401)
-        .json({ success: false, message: "Invalid credentials" });
+      return res.status(401).json({
+        success: false,
+        message: "Invalid credentials",
+      });
     }
 
     const token = jwt.sign(
       { user_id: user.user_id, email: user.email, role: user.role },
       JWT_SECRET,
-      { expiresIn: "7d" },
+      { expiresIn: "7d" }
     );
 
     res.json({

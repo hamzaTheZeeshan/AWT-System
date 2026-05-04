@@ -36,7 +36,6 @@ export const createDonation = async (req, res) => {
     const isBooks = donation_type_id === 5;
 
     if (isMoneyType) {
-      // Money/Zakat/Sadaqah must NOT have items
       if (items && items.length > 0) {
         return res.status(400).json({
           success: false,
@@ -44,7 +43,6 @@ export const createDonation = async (req, res) => {
             'Money/Zakat/Sadaqah donations cannot have items. Use "amount".',
         });
       }
-      // Must have a positive amount
       if (!amount || amount <= 0) {
         return res.status(400).json({
           success: false,
@@ -52,7 +50,6 @@ export const createDonation = async (req, res) => {
             "Amount is required and must be > 0 for Money/Zakat/Sadaqah.",
         });
       }
-      // Campaign validation & over-donation check
       if (campaign_id) {
         const [campaign] = await promiseDb.query(
           `SELECT * FROM Campaign WHERE campaign_id = ? AND end_date >= CURDATE()`,
@@ -76,14 +73,12 @@ export const createDonation = async (req, res) => {
     }
 
     if (isClothes || isBooks) {
-      // Clothes/Books must have items array
       if (!items || items.length === 0) {
         return res.status(400).json({
           success: false,
           message: "Items array is required for Clothes/Books donations.",
         });
       }
-      // Should NOT have amount
       if (amount && amount > 0) {
         return res.status(400).json({
           success: false,
@@ -91,7 +86,6 @@ export const createDonation = async (req, res) => {
             'Amount should not be provided for Clothes/Books. Use "items".',
         });
       }
-      // --- NEW: Validate orphanage_id (directly against Orphanage table) ---
       if (orphanage_id) {
         const [orphanage] = await promiseDb.query(
           "SELECT * FROM Orphanage WHERE orphanage_id = ?",
@@ -104,7 +98,6 @@ export const createDonation = async (req, res) => {
           });
         }
       }
-      // Validate each item
       for (const item of items) {
         if (isClothes && (!item.type || !item.quantity || item.quantity <= 0)) {
           return res.status(400).json({
@@ -124,7 +117,7 @@ export const createDonation = async (req, res) => {
     // --- 3. Get next donation_id ---
     const donation_id = await getNextId("Donation", "donation_id");
 
-    // --- 4. Insert into Donation table (using orphanage_id, not receiver_id) ---
+    // --- 4. Insert into Donation table ---
     await promiseDb.query(
       `INSERT INTO Donation (donation_id, user_id, campaign_id, orphanage_id, donation_type_id, date, amount, status) 
        VALUES (?, ?, ?, ?, ?, CURDATE(), ?, 'pending')`,
@@ -175,12 +168,15 @@ export const createDonation = async (req, res) => {
       }
     }
 
-    // --- 6. Upgrade role from 'general' to 'donor' if first donation ---
+    // --- 6. Fetch full user profile + upgrade role if first donation ---
+    // Expanded query to grab donor details for the receipt
     const [userRows] = await promiseDb.query(
-      "SELECT role FROM Users WHERE user_id = ?",
+      "SELECT role, name, email, phone FROM Users WHERE user_id = ?",
       [user_id],
     );
-    const currentDbRole = userRows[0]?.role;
+    const currentUser = userRows[0];
+    const currentDbRole = currentUser?.role;
+
     if (currentDbRole === "general") {
       const [countResult] = await promiseDb.query(
         "SELECT COUNT(*) as count FROM Donation WHERE user_id = ?",
@@ -199,6 +195,25 @@ export const createDonation = async (req, res) => {
     res.status(201).json({
       success: true,
       message: "Donation recorded successfully",
+      receipt_id: `RCP-${donation_id}`,
+
+      // Donor info for the receipt PDF
+      donor: {
+        name:  currentUser?.name  || null,
+        email: currentUser?.email || null,
+        phone: currentUser?.phone || null,
+      },
+
+      // Confirmed donation data for the receipt PDF
+      donation: {
+        id:               donation_id,
+        donation_type_id: donation_type_id,
+        amount:           amount || null,
+        items:            items  || [],
+        created_at:       new Date().toISOString(),
+      },
+
+      // Keep these for backwards compatibility
       donation_id: donation_id,
       status: "pending",
     });
