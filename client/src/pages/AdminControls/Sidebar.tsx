@@ -61,7 +61,7 @@ const navItems = [
       <path d="M12 3v3" />
     </svg>
   ),
-},
+}
 ];
 
 const Sidebar: React.FC<SidebarProps> = ({ isOpen, onToggle, activeTab, onTabChange }) => {

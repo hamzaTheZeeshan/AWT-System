@@ -7,6 +7,7 @@ import { BrowserRouter } from "react-router-dom";
 import AdminControl from "./pages/AdminControls/AdminControl";
 import AboutPage from "./pages/AboutUs/AboutPage";
 import ContactPage from "./pages/ContactUs/ContactPage";
+import InternshipPage from "./pages/InternshipPage/InternshipPage";
 
 const App: React.FC = () => {
   return (
@@ -17,6 +18,7 @@ const App: React.FC = () => {
       <Route path="/signup" element={<Register />} />
       <Route path="/admin" element={<AdminControl />} />
       <Route path="/about" element={<AboutPage />} />
+      <Route path="/interns" element={<InternshipPage />} />
       <Route path="/contact" element={<ContactPage />} />
     </Routes>
   );
