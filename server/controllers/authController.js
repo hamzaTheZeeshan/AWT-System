@@ -6,7 +6,7 @@ import dotenv from "dotenv";
 dotenv.config();
 
 // get secret from env
-const JWT_SECRET = process.env.JWT_SECRET;
+const JWT_SECRET = "my_secret_key_2026";
 
 // DB promise wrapper
 const promiseDb = db.promise();

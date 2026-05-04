@@ -29,6 +29,9 @@ import {
   createIntern,
   updateIntern,
   deleteIntern,
+  getAllInternApplications,
+  approveInternApplication,
+  rejectInternApplication,
 } from "../controllers/adminController.js";
 const router = express.Router();
 
@@ -71,5 +74,8 @@ router.get("/interns", getAllInterns);
 router.post("/interns", createIntern);
 router.put("/interns/:id", updateIntern);
 router.delete("/interns/:id", deleteIntern);
+router.get("/intern-applications", getAllInternApplications);
+router.put("/intern-applications/:id/approve", approveInternApplication);
+router.put("/intern-applications/:id/reject", rejectInternApplication);
 
 export default router;

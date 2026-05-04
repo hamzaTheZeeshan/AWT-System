@@ -30,10 +30,15 @@ CREATE TABLE Campaign (
 
 CREATE TABLE Intern (
     intern_id INT PRIMARY KEY AUTO_INCREMENT,
+    user_id INT NOT NULL,
     name VARCHAR(255),
     role VARCHAR(100),
     assigned_task TEXT,
-    end_date DATE
+    end_date DATE,
+    status ENUM('pending', 'approved', 'rejected') DEFAULT 'pending',
+    applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    rejected_reason TEXT,
+    FOREIGN KEY (user_id) REFERENCES Users(user_id) ON DELETE CASCADE
 );
 
 CREATE TABLE Receiver (

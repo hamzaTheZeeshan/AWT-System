@@ -9,7 +9,7 @@ import adminRoutes from "./routers/adminRoutes.js";
 import campaignRoutes from "./routers/campaignRoutes.js";
 import orphanageRoutes from "./routers/orphanageRoutes.js";
 import contactRoutes from "./routers/contactRoutes.js";
-
+import internRoutes from "./routers/internRoutes.js";
 
 const app = express();
 
@@ -31,7 +31,7 @@ app.use("/api/admin", adminRoutes);
 app.use("/api/campaigns", campaignRoutes);
 app.use("/api/orphanages", orphanageRoutes);
 app.use("/api/contact", contactRoutes);
-
+app.use("/api/interns", internRoutes);
 const PORT = 5000;
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);

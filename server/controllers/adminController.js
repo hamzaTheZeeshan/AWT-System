@@ -543,8 +543,14 @@ export const getAllReceivers = async (req, res) => {
 // @access  Private/Admin
 export const createReceiver = async (req, res) => {
   try {
-    const { name, location, contact_info, sufficiency, needs_description, priority } =
-      req.body;
+    const {
+      name,
+      location,
+      contact_info,
+      sufficiency,
+      needs_description,
+      priority,
+    } = req.body;
     const promiseDb = db.promise();
 
     // AUTO_INCREMENT handles receiver_id
@@ -655,36 +661,18 @@ export const createOrphanage = async (req, res) => {
 // @route   DELETE /api/admin/orphanages/:id
 // @access  Private/Admin
 
-// @desc    Get all interns (admin)
-// @route   GET /api/admin/interns
-// @access  Private/Admin
-export const getAllInterns = async (req, res) => {
-  try {
-    const promiseDb = db.promise();
-
-    const [interns] = await promiseDb.query(
-      "SELECT * FROM Intern ORDER BY end_date ASC",
-    );
-
-    res.json({ success: true, count: interns.length, interns });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ success: false, message: "Server error" });
-  }
-};
-
 // @desc    Create a new intern (admin)
 // @route   POST /api/admin/interns
 // @access  Private/Admin
 export const createIntern = async (req, res) => {
   try {
-    const { name, role, assigned_task, end_date } = req.body;
+    const { name, role, assigned_task, end_date, user_id } = req.body;
     const promiseDb = db.promise();
 
-    // AUTO_INCREMENT handles intern_id
     const [result] = await promiseDb.query(
-      "INSERT INTO Intern (name, role, assigned_task, end_date) VALUES (?, ?, ?, ?)",
-      [name, role, assigned_task, end_date],
+      `INSERT INTO Intern (user_id, name, role, assigned_task, end_date, status)
+       VALUES (?, ?, ?, ?, ?, 'approved')`,
+      [user_id || null, name, role, assigned_task, end_date]
     );
 
     res.status(201).json({
@@ -748,7 +736,7 @@ export const updateOrphanage = async (req, res) => {
     const promiseDb = db.promise();
     await promiseDb.query(
       "UPDATE Orphanage SET name = ?, location = ?, contact_info = ? WHERE orphanage_id = ?",
-      [name, location, contact_info, id]
+      [name, location, contact_info, id],
     );
     res.json({ success: true, message: "Orphanage updated" });
   } catch (error) {
@@ -766,16 +754,113 @@ export const deleteOrphanage = async (req, res) => {
     // Check if orphanage has distributions
     const [dist] = await promiseDb.query(
       "SELECT * FROM Distribution WHERE orphanage_id = ?",
-      [id]
+      [id],
     );
     if (dist.length > 0) {
       return res.status(400).json({
         success: false,
-        message: "Cannot delete orphanage with existing distributions. Transfer or remove distributions first."
+        message:
+          "Cannot delete orphanage with existing distributions. Transfer or remove distributions first.",
       });
     }
     await promiseDb.query("DELETE FROM Orphanage WHERE orphanage_id = ?", [id]);
     res.json({ success: true, message: "Orphanage deleted" });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+};
+
+// @desc    Get all intern applications (pending first, then others)
+// @route   GET /api/admin/intern-applications
+// @access  Private/Admin
+export const getAllInternApplications = async (req, res) => {
+  try {
+    const promiseDb = db.promise();
+    const [applications] = await promiseDb.query(`
+      SELECT i.*, u.email
+      FROM Intern i
+      JOIN Users u ON i.user_id = u.user_id
+      ORDER BY FIELD(i.status, 'pending', 'approved', 'rejected'), i.applied_at ASC
+    `);
+    res.json({ success: true, applications });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+};
+
+// @desc    Approve intern application
+// @route   PUT /api/admin/intern-applications/:id/approve
+// @access  Private/Admin
+export const approveInternApplication = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const promiseDb = db.promise();
+
+    const [app] = await promiseDb.query(
+      "SELECT * FROM Intern WHERE intern_id = ?",
+      [id],
+    );
+    if (app.length === 0)
+      return res
+        .status(404)
+        .json({ success: false, message: "Application not found" });
+    if (app[0].status !== "pending")
+      return res
+        .status(400)
+        .json({ success: false, message: "Application already processed" });
+
+    await promiseDb.query(
+      'UPDATE Intern SET status = "approved" WHERE intern_id = ?',
+      [id],
+    );
+    res.json({ success: true, message: "Application approved" });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+};
+
+// @desc    Reject intern application
+// @route   PUT /api/admin/intern-applications/:id/reject
+// @access  Private/Admin
+export const rejectInternApplication = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { rejected_reason } = req.body;
+    const promiseDb = db.promise();
+
+    const [app] = await promiseDb.query(
+      "SELECT * FROM Intern WHERE intern_id = ?",
+      [id],
+    );
+    if (app.length === 0)
+      return res
+        .status(404)
+        .json({ success: false, message: "Application not found" });
+    if (app[0].status !== "pending")
+      return res
+        .status(400)
+        .json({ success: false, message: "Application already processed" });
+
+    await promiseDb.query(
+      'UPDATE Intern SET status = "rejected", rejected_reason = ? WHERE intern_id = ?',
+      [rejected_reason || null, id],
+    );
+    res.json({ success: true, message: "Application rejected" });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+};
+export const getAllInterns = async (req, res) => {
+  try {
+    const promiseDb = db.promise();
+    const [interns] = await promiseDb.query(
+      "SELECT * FROM Intern WHERE status = 'approved' ORDER BY end_date ASC",
+    );
+    res.json({ success: true, count: interns.length, interns });
   } catch (error) {
     console.error(error);
     res.status(500).json({ success: false, message: "Server error" });
