@@ -70,6 +70,8 @@ export default function InternshipPage() {
     fetchApplications();
   }, [activeTab]);
 
+
+
   const handleApply = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!role || !assignedTask || !endDate) {
@@ -86,7 +88,11 @@ export default function InternshipPage() {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ role, assigned_task: assignedTask, end_date: endDate }),
+        body: JSON.stringify({
+          role: role,
+          assigned_task: assignedTask,
+          end_date: endDate
+        }),
       });
       if (!res.ok) throw new Error("Failed to submit application");
       setFeedback({ type: "success", msg: "Application submitted successfully!" });
@@ -199,9 +205,8 @@ export default function InternshipPage() {
 
             {feedback && (
               <div
-                className={`feedback ${
-                  feedback.type === "error" ? "error-msg" : "success-msg"
-                }`}
+                className={`feedback ${feedback.type === "error" ? "error-msg" : "success-msg"
+                  }`}
               >
                 {feedback.msg}
               </div>

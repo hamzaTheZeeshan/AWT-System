@@ -357,9 +357,9 @@ export const createDistribution = async (req, res) => {
     }
 
     if (receiver_id) {
-      // ✅ Table name corrected to 'Reciever'
+      // ✅ Table name corrected to 'receiver'
       const [receiver] = await promiseDb.query(
-        "SELECT * FROM Reciever WHERE receiver_id = ?",
+        "SELECT * FROM receiver WHERE receiver_id = ?",
         [receiver_id],
       );
       if (receiver.length === 0)
@@ -432,7 +432,7 @@ export const getAllDistributions = async (req, res) => {
                WHEN dist.orphanage_id IS NOT NULL THEN 'orphanage'
              END as receiver_type
       FROM Distribution dist
-      LEFT JOIN Reciever r ON dist.receiver_id = r.receiver_id   -- ✅ corrected table name
+      LEFT JOIN receiver r ON dist.receiver_id = r.receiver_id   -- ✅ corrected table name
       LEFT JOIN Orphanage o ON dist.orphanage_id = o.orphanage_id
       ORDER BY dist.date DESC
     `);
@@ -546,7 +546,7 @@ export const getAllReceivers = async (req, res) => {
     const promiseDb = db.promise();
     const [receivers] = await promiseDb.query(`
       SELECT receiver_id, name, location, contact_info, sufficiency, needs_description, priority
-      FROM Reciever   -- ✅ corrected table name
+      FROM receiver   -- ✅ corrected table name
       ORDER BY receiver_id
     `);
     res.json({ success: true, count: receivers.length, receivers });
@@ -572,7 +572,7 @@ export const createReceiver = async (req, res) => {
     const promiseDb = db.promise();
     // ✅ Table name corrected
     const [result] = await promiseDb.query(
-      `INSERT INTO Reciever (name, location, contact_info, sufficiency, needs_description, priority)
+      `INSERT INTO receiver (name, location, contact_info, sufficiency, needs_description, priority)
        VALUES (?, ?, ?, ?, ?, ?)`,
       [
         name,
@@ -617,7 +617,7 @@ export const deleteReceiver = async (req, res) => {
         });
     }
     // ✅ Corrected table name
-    await promiseDb.query("DELETE FROM Reciever WHERE receiver_id = ?", [id]);
+    await promiseDb.query("DELETE FROM receiver WHERE receiver_id = ?", [id]);
     res.json({ success: true, message: "Receiver deleted" });
   } catch (error) {
     console.error(error);

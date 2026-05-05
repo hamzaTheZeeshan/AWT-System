@@ -1,3 +1,4 @@
+import db from "../db.js";
 export const getOrphanages = async (req, res) => {
   try {
     const promiseDb = db.promise();

@@ -33,7 +33,7 @@ const OrphanagesList: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`${BASE_URL}/admin/orphanages`, {
+      const res = await fetch(`${BASE_URL}/orphanages`, {
         headers: { Authorization: `Bearer ${getToken()}` },
       });
       const data = await res.json();

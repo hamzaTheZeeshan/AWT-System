@@ -30,7 +30,7 @@ export const createDonation = async (req, res) => {
         .json({ success: false, message: "Invalid donation type" });
     }
 
-    // --- 2. Type‑data mismatch validation + destination validation ---
+    // --- 2. Type-data mismatch validation + destination validation ---
     const isMoneyType = [1, 2, 3].includes(donation_type_id);
     const isClothes = donation_type_id === 4;
     const isBooks = donation_type_id === 5;
@@ -39,15 +39,13 @@ export const createDonation = async (req, res) => {
       if (items && items.length > 0) {
         return res.status(400).json({
           success: false,
-          message:
-            'Money/Zakat/Sadaqah donations cannot have items. Use "amount".',
+          message: 'Money/Zakat/Sadaqah donations cannot have items. Use "amount".',
         });
       }
       if (!amount || amount <= 0) {
         return res.status(400).json({
           success: false,
-          message:
-            "Amount is required and must be > 0 for Money/Zakat/Sadaqah.",
+          message: "Amount is required and must be > 0 for Money/Zakat/Sadaqah.",
         });
       }
       if (campaign_id) {
@@ -82,8 +80,7 @@ export const createDonation = async (req, res) => {
       if (amount && amount > 0) {
         return res.status(400).json({
           success: false,
-          message:
-            'Amount should not be provided for Clothes/Books. Use "items".',
+          message: 'Amount should not be provided for Clothes/Books. Use "items".',
         });
       }
       if (orphanage_id) {
@@ -118,23 +115,18 @@ export const createDonation = async (req, res) => {
     const donation_id = await getNextId("Donation", "donation_id");
 
     // --- 4. Insert into Donation table ---
-    // For money types (1,2,3)
-    // Determine remaining_amount: for money types (1,2,3) use amount, else null
-    const remainingAmount = [1, 2, 3].includes(donation_type_id)
-      ? amount
-      : null;
-
+    // FIXED: Removed 'remaining_amount' — not in DB schema.
+    // DB columns: donation_id, user_id, campaign_id, donation_type_id, orphanage_id, date, amount, status
     await promiseDb.query(
-      `INSERT INTO Donation (donation_id, user_id, campaign_id, orphanage_id, donation_type_id, date, amount, remaining_amount, status) 
-   VALUES (?, ?, ?, ?, ?, CURDATE(), ?, ?, 'pending')`,
+      `INSERT INTO Donation (donation_id, user_id, campaign_id, donation_type_id, orphanage_id, date, amount, status) 
+       VALUES (?, ?, ?, ?, ?, CURDATE(), ?, 'pending')`,
       [
         donation_id,
         user_id,
         campaign_id || null,
-        orphanage_id || null,
         donation_type_id,
+        orphanage_id || null,
         amount || null,
-        remainingAmount,
       ],
     );
 
@@ -175,16 +167,14 @@ export const createDonation = async (req, res) => {
       }
     }
 
-    // --- 6. Fetch full user profile + upgrade role if first donation ---
-    // Expanded query to grab donor details for the receipt
+    // --- 6. Fetch user profile + upgrade role if first donation ---
     const [userRows] = await promiseDb.query(
       "SELECT role, name, email, phone FROM Users WHERE user_id = ?",
       [user_id],
     );
     const currentUser = userRows[0];
-    const currentDbRole = currentUser?.role;
 
-    if (currentDbRole === "general") {
+    if (currentUser?.role === "general") {
       const [countResult] = await promiseDb.query(
         "SELECT COUNT(*) as count FROM Donation WHERE user_id = ?",
         [user_id],
@@ -203,15 +193,11 @@ export const createDonation = async (req, res) => {
       success: true,
       message: "Donation recorded successfully",
       receipt_id: `RCP-${donation_id}`,
-
-      // Donor info for the receipt PDF
       donor: {
         name: currentUser?.name || null,
         email: currentUser?.email || null,
         phone: currentUser?.phone || null,
       },
-
-      // Confirmed donation data for the receipt PDF
       donation: {
         id: donation_id,
         donation_type_id: donation_type_id,
@@ -219,8 +205,6 @@ export const createDonation = async (req, res) => {
         items: items || [],
         created_at: new Date().toISOString(),
       },
-
-      // Keep these for backwards compatibility
       donation_id: donation_id,
       status: "pending",
     });
@@ -240,10 +224,10 @@ export const getMyDonations = async (req, res) => {
 
     const [donations] = await promiseDb.query(
       `SELECT d.donation_id, dt.type_name, d.amount, d.date, d.status, d.campaign_id
-             FROM Donation d
-             JOIN Donation_Type dt ON d.donation_type_id = dt.donation_type_id
-             WHERE d.user_id = ?
-             ORDER BY d.date DESC`,
+       FROM Donation d
+       JOIN Donation_Type dt ON d.donation_type_id = dt.donation_type_id
+       WHERE d.user_id = ?
+       ORDER BY d.date DESC`,
       [user_id],
     );
 
@@ -261,14 +245,11 @@ export const getMyDonations = async (req, res) => {
 // @desc    Get total donations (public)
 // @route   GET /api/donations/total
 // @access  Public
-// @desc    Get total donations (public)
-// @route   GET /api/donations/total
-// @access  Public
 export const getTotalDonations = async (req, res) => {
   try {
-    const promiseDb = db.promise(); // ✅ Fix 1: use promiseDb consistently
+    const promiseDb = db.promise();
 
-    // ── 1. Per-type monetary totals (Money, Zakat, Sadqah, etc.) ──────────
+    // Per-type monetary totals
     const [perTypeRows] = await promiseDb.query(`
       SELECT
         dt.type_name,
@@ -283,8 +264,7 @@ export const getTotalDonations = async (req, res) => {
       ORDER BY total_amount DESC
     `);
 
-    // ── 2. Clothes & Books item counts ────────────────────────────────────
-    // ✅ Fix 2: query the actual Clothes/Books tables, not Donation columns
+    // Clothes & Books item counts
     const [[itemTotals]] = await promiseDb.query(`
       SELECT
         COALESCE((
@@ -301,7 +281,7 @@ export const getTotalDonations = async (req, res) => {
         ), 0) AS total_books_items
     `);
 
-    // ── 3. Campaign donations total ───────────────────────────────────────
+    // Campaign donations total
     const [[campaignTotals]] = await promiseDb.query(`
       SELECT COALESCE(SUM(amount), 0) AS total_campaign_amount
       FROM Donation
@@ -310,7 +290,7 @@ export const getTotalDonations = async (req, res) => {
         AND amount IS NOT NULL
     `);
 
-    // ── 4. Orphanage donations total ──────────────────────────────────────
+    // Orphanage donations total
     const [[orphanageTotals]] = await promiseDb.query(`
       SELECT COALESCE(SUM(amount), 0) AS total_orphanage_amount
       FROM Donation
@@ -321,22 +301,22 @@ export const getTotalDonations = async (req, res) => {
 
     return res.json({
       totals: {
-        total_clothes_items:   Number(itemTotals.total_clothes_items),
-        total_books_items:     Number(itemTotals.total_books_items),
+        total_clothes_items: Number(itemTotals.total_clothes_items),
+        total_books_items: Number(itemTotals.total_books_items),
         total_campaign_amount: Number(campaignTotals.total_campaign_amount),
         total_orphanage_amount: Number(orphanageTotals.total_orphanage_amount),
       },
       perType: perTypeRows.map((r) => ({
-        type_name:    r.type_name,
+        type_name: r.type_name,
         total_amount: Number(r.total_amount),
       })),
     });
-
   } catch (err) {
     console.error("donations/total error:", err);
     return res.status(500).json({ error: "Internal server error" });
   }
-}; 
+};
+
 // @desc    Track individual donation record
 // @route   GET /api/donations/:id
 // @access  Private (owner or admin)
@@ -348,12 +328,12 @@ export const getDonationById = async (req, res) => {
     const promiseDb = db.promise();
 
     let query = `
-            SELECT d.*, dt.type_name, u.name as donor_name, u.email as donor_email
-            FROM Donation d
-            JOIN Donation_Type dt ON d.donation_type_id = dt.donation_type_id
-            JOIN Users u ON d.user_id = u.user_id
-            WHERE d.donation_id = ?
-        `;
+      SELECT d.*, dt.type_name, u.name as donor_name, u.email as donor_email
+      FROM Donation d
+      JOIN Donation_Type dt ON d.donation_type_id = dt.donation_type_id
+      JOIN Users u ON d.user_id = u.user_id
+      WHERE d.donation_id = ?
+    `;
 
     if (user_role !== "admin") {
       query += ` AND d.user_id = ?`;

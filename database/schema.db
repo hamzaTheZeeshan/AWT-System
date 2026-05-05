@@ -146,13 +146,13 @@ ALTER TABLE Donation MODIFY COLUMN status ENUM('pending','approved','rejected','
 
 ALTER TABLE Distribution MODIFY distribution_id INT NOT NULL AUTO_INCREMENT;
 
-ALTER TABLE Reciever MODIFY receiver_id INT NOT NULL AUTO_INCREMENT;
+ALTER TABLE receiver MODIFY receiver_id INT NOT NULL AUTO_INCREMENT;
 
--- 1. Drop the foreign key that links Distribution to Reciever
+-- 1. Drop the foreign key that links Distribution to receiver
 ALTER TABLE Distribution DROP FOREIGN KEY distribution_ibfk_2;
 
 -- 2. Make receiver_id auto-increment
-ALTER TABLE Reciever MODIFY receiver_id INT NOT NULL AUTO_INCREMENT;
+ALTER TABLE receiver MODIFY receiver_id INT NOT NULL AUTO_INCREMENT;
 
 -- 3. Re-add the foreign key
-ALTER TABLE Distribution ADD FOREIGN KEY (receiver_id) REFERENCES Reciever(receiver_id);
+ALTER TABLE Distribution ADD FOREIGN KEY (receiver_id) REFERENCES receiver(receiver_id);

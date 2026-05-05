@@ -51,17 +51,34 @@ const navItems = [
     ),
   },
   {
-  id: "orphanages",
-  label: "Orphanages",
-  icon: (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="M3 10.5L12 3l9 7.5" />
-      <path d="M5 10v10h14V10" />
-      <path d="M9 20v-6h6v6" />
-      <path d="M12 3v3" />
-    </svg>
-  ),
-}
+    id: "orphanages",
+    label: "Orphanages",
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <path d="M3 10.5L12 3l9 7.5" />
+        <path d="M5 10v10h14V10" />
+        <path d="M9 20v-6h6v6" />
+        <path d="M12 3v3" />
+      </svg>
+    ),
+  },
+  {
+    id: "internships",
+    label: "Internships",
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        {/* Graduation cap */}
+        <path d="M2 9l10-5 10 5-10 5-10-5z" />
+        <path d="M6 11v4c0 2 3 4 6 4s6-2 6-4v-4" />
+        <path d="M22 9v6" />
+        <circle cx="22" cy="15" r="1" />
+
+        {/* Growth arrow */}
+        <path d="M4 20l4-4 3 3 7-7" />
+        <path d="M18 12h-3v3" />
+      </svg>
+    ),
+  }
 ];
 
 const Sidebar: React.FC<SidebarProps> = ({ isOpen, onToggle, activeTab, onTabChange }) => {
