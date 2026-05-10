@@ -14,20 +14,24 @@ const getNextId = async (table, idColumn) => {
 // @access  Private
 export const createDonation = async (req, res) => {
   try {
-    const { donation_type_id, amount, campaign_id, orphanage_id, items } =
-      req.body;
+    // --- 0. Parse & sanitize inputs (force numeric to avoid string comparison bugs) ---
+    const donation_type_id = Number(req.body.donation_type_id);
+    const amount = req.body.amount !== undefined && req.body.amount !== "" 
+      ? Number(req.body.amount) 
+      : null;
+    const campaign_id = req.body.campaign_id ? Number(req.body.campaign_id) : null;
+    const orphanage_id = req.body.orphanage_id ? Number(req.body.orphanage_id) : null;
+    const { items } = req.body;
     const user_id = req.user.user_id;
     const promiseDb = db.promise();
 
     // --- 1. Validate donation type exists ---
     const [typeCheck] = await promiseDb.query(
       "SELECT * FROM Donation_Type WHERE donation_type_id = ?",
-      [donation_type_id],
+      [donation_type_id]
     );
     if (typeCheck.length === 0) {
-      return res
-        .status(400)
-        .json({ success: false, message: "Invalid donation type" });
+      return res.status(400).json({ success: false, message: "Invalid donation type" });
     }
 
     // --- 2. Type-data mismatch validation + destination validation ---
@@ -48,10 +52,12 @@ export const createDonation = async (req, res) => {
           message: "Amount is required and must be > 0 for Money/Zakat/Sadaqah.",
         });
       }
+
+      // FIX: Only validate campaign if campaign_id is provided
       if (campaign_id) {
         const [campaign] = await promiseDb.query(
           `SELECT * FROM Campaign WHERE campaign_id = ? AND end_date >= CURDATE()`,
-          [campaign_id],
+          [campaign_id]
         );
         if (campaign.length === 0) {
           return res.status(400).json({
@@ -59,8 +65,18 @@ export const createDonation = async (req, res) => {
             message: "Invalid or inactive campaign.",
           });
         }
-        const remaining =
-          campaign[0].target_amount - (campaign[0].amount_raised || 0);
+
+        // FIX: Guard against null/undefined amount_raised before computing remaining
+        const amountRaised = Number(campaign[0].amount_raised) || 0;
+        const targetAmount = Number(campaign[0].target_amount) || 0;
+        const remaining = targetAmount - amountRaised;
+
+        if (remaining <= 0) {
+          return res.status(400).json({
+            success: false,
+            message: "This campaign has already reached its target amount.",
+          });
+        }
         if (amount > remaining) {
           return res.status(400).json({
             success: false,
@@ -86,7 +102,7 @@ export const createDonation = async (req, res) => {
       if (orphanage_id) {
         const [orphanage] = await promiseDb.query(
           "SELECT * FROM Orphanage WHERE orphanage_id = ?",
-          [orphanage_id],
+          [orphanage_id]
         );
         if (orphanage.length === 0) {
           return res.status(400).json({
@@ -96,13 +112,13 @@ export const createDonation = async (req, res) => {
         }
       }
       for (const item of items) {
-        if (isClothes && (!item.type || !item.quantity || item.quantity <= 0)) {
+        if (isClothes && (!item.type || !item.quantity || Number(item.quantity) <= 0)) {
           return res.status(400).json({
             success: false,
             message: "Each clothing item must have type and positive quantity.",
           });
         }
-        if (isBooks && (!item.title || !item.quantity || item.quantity <= 0)) {
+        if (isBooks && (!item.title || !item.quantity || Number(item.quantity) <= 0)) {
           return res.status(400).json({
             success: false,
             message: "Each book item must have title and positive quantity.",
@@ -114,20 +130,31 @@ export const createDonation = async (req, res) => {
     // --- 3. Get next donation_id ---
     const donation_id = await getNextId("Donation", "donation_id");
 
+    // DEBUG: Remove this log once confirmed working
+    console.log("[createDonation] About to insert:", {
+      donation_id,
+      user_id,
+      campaign_id,
+      donation_type_id,
+      orphanage_id,
+      amount,
+      isMoneyType,
+      remaining_amount: isMoneyType ? amount : null,
+    });
+
     // --- 4. Insert into Donation table ---
-    // FIXED: Removed 'remaining_amount' — not in DB schema.
-    // DB columns: donation_id, user_id, campaign_id, donation_type_id, orphanage_id, date, amount, status
     await promiseDb.query(
-      `INSERT INTO Donation (donation_id, user_id, campaign_id, donation_type_id, orphanage_id, date, amount, status) 
-       VALUES (?, ?, ?, ?, ?, CURDATE(), ?, 'pending')`,
+      `INSERT INTO Donation (donation_id, user_id, campaign_id, donation_type_id, orphanage_id, date, amount, remaining_amount, status) 
+       VALUES (?, ?, ?, ?, ?, CURDATE(), ?, ?, 'pending')`,
       [
         donation_id,
         user_id,
         campaign_id || null,
         donation_type_id,
         orphanage_id || null,
-        amount || null,
-      ],
+        isMoneyType ? amount : null,         // FIX: explicitly null for non-money
+        isMoneyType ? amount : null,         // remaining_amount = amount for money types
+      ]
     );
 
     // --- 5. Insert items into Clothes or Books ---
@@ -145,8 +172,8 @@ export const createDonation = async (req, res) => {
               item.size || null,
               item.conditionOfCloth || null,
               item.description || null,
-              item.quantity,
-            ],
+              Number(item.quantity),
+            ]
           );
         } else if (isBooks) {
           const book_id = await getNextId("Books", "book_id");
@@ -160,8 +187,8 @@ export const createDonation = async (req, res) => {
               item.author || null,
               item.conditionOfBook || null,
               item.description || null,
-              item.quantity,
-            ],
+              Number(item.quantity),
+            ]
           );
         }
       }
@@ -170,21 +197,21 @@ export const createDonation = async (req, res) => {
     // --- 6. Fetch user profile + upgrade role if first donation ---
     const [userRows] = await promiseDb.query(
       "SELECT role, name, email, phone FROM Users WHERE user_id = ?",
-      [user_id],
+      [user_id]
     );
     const currentUser = userRows[0];
 
     if (currentUser?.role === "general") {
       const [countResult] = await promiseDb.query(
         "SELECT COUNT(*) as count FROM Donation WHERE user_id = ?",
-        [user_id],
+        [user_id]
       );
       if (countResult[0].count === 1) {
         await promiseDb.query(
           "UPDATE Users SET role = 'donor' WHERE user_id = ?",
-          [user_id],
+          [user_id]
         );
-        console.log(`User ${user_id} upgraded from 'general' to 'donor'.`);
+        console.log(`[createDonation] User ${user_id} upgraded from 'general' to 'donor'.`);
       }
     }
 
@@ -200,16 +227,17 @@ export const createDonation = async (req, res) => {
       },
       donation: {
         id: donation_id,
-        donation_type_id: donation_type_id,
-        amount: amount || null,
+        donation_type_id,
+        amount: isMoneyType ? amount : null,
+        remaining_amount: isMoneyType ? amount : null,
         items: items || [],
         created_at: new Date().toISOString(),
       },
-      donation_id: donation_id,
+      donation_id,
       status: "pending",
     });
   } catch (error) {
-    console.error(error);
+    console.error("[createDonation] Error:", error);
     res.status(500).json({ success: false, message: "Server error" });
   }
 };

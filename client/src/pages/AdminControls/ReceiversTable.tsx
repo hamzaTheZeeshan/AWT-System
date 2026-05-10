@@ -2,12 +2,6 @@ import React, { useEffect, useState } from "react";
 import "./Table.css";
 import "./ReceiversTable.css";
 
-// Matches the result of getAllReceivers query:
-// SELECT r.receiver_id, r.name, r.location, r.contact_info,
-//        r.sufficiency, r.needs_description, r.priority,
-//        CASE WHEN o.receiver_id IS NOT NULL THEN 1 ELSE 0 END as is_orphanage
-// FROM receiver r
-// LEFT JOIN Orphanage o ON r.receiver_id = o.receiver_id
 interface Receiver {
   receiver_id: number;
   name: string;
@@ -34,9 +28,21 @@ interface OrphanageFormData {
   contact_info: string;
 }
 
+interface DistributableDonation {
+  donation_id: number;
+  donor_name: string;
+  type_name: "Money" | "Zakat" | "Sadqah" | "Clothes" | "Books";
+  amount: number | null;
+  remaining_amount: number | null;
+  status: string;
+  date: string;
+}
+
 type FilterType = "all" | "orphanage" | "general";
 
 const BASE_URL = "http://localhost:5000/api/admin";
+
+const MONEY_TYPES = ["Money", "Zakat", "Sadqah"];
 
 const EMPTY_RECEIVER: ReceiverFormData = {
   name: "",
@@ -60,16 +66,25 @@ const ReceiversTable: React.FC = () => {
   const [filter, setFilter] = useState<FilterType>("all");
   const [actioningId, setActioningId] = useState<number | null>(null);
 
-  // Modal state
+  // ── Standard modals ────────────────────────────────────────────────────────
   const [showReceiverModal, setShowReceiverModal] = useState(false);
   const [showOrphanageModal, setShowOrphanageModal] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Receiver | null>(null);
   const [receiverForm, setReceiverForm] = useState<ReceiverFormData>(EMPTY_RECEIVER);
   const [orphanageForm, setOrphanageForm] = useState<OrphanageFormData>(EMPTY_ORPHANAGE);
 
+  // ── Allocate modal ─────────────────────────────────────────────────────────
+  const [allocateTarget, setAllocateTarget] = useState<Receiver | null>(null);
+  const [donations, setDonations] = useState<DistributableDonation[]>([]);
+  const [donationsLoading, setDonationsLoading] = useState(false);
+  const [donationsError, setDonationsError] = useState<string | null>(null);
+  const [selectedDonationId, setSelectedDonationId] = useState<number | "">("");
+  const [quantity, setQuantity] = useState("");
+  const [allocating, setAllocating] = useState(false);
+
   const getToken = () => sessionStorage.getItem("token");
 
-  // ── Fetch ──────────────────────────────────────────────────────────────────
+  // ── Fetch receivers ────────────────────────────────────────────────────────
   const fetchReceivers = async () => {
     setLoading(true);
     setError(null);
@@ -92,6 +107,85 @@ const ReceiversTable: React.FC = () => {
 
   useEffect(() => { fetchReceivers(); }, []);
 
+  // ── Open allocate modal + fetch donations ──────────────────────────────────
+  const openAllocateModal = async (receiver: Receiver) => {
+    setAllocateTarget(receiver);
+    setSelectedDonationId("");
+    setQuantity("");
+    setDonationsError(null);
+    setDonationsLoading(true);
+    try {
+      const res = await fetch(`${BASE_URL}/donations?distributable=1`, {
+        headers: { Authorization: `Bearer ${getToken()}` },
+      });
+      const data = await res.json();
+      if (data.success) {
+        setDonations(data.donations);
+      } else {
+        setDonationsError(data.message || "Failed to fetch donations");
+      }
+    } catch {
+      setDonationsError("Network error.");
+    } finally {
+      setDonationsLoading(false);
+    }
+  };
+
+  // ── Derived values for selected donation ───────────────────────────────────
+  const selectedDonation = donations.find((d) => d.donation_id === selectedDonationId);
+  const isMoneyType = MONEY_TYPES.includes(selectedDonation?.type_name ?? "");
+  const inputLabel = isMoneyType ? "Amount" : "Quantity";
+  const availableQty = selectedDonation
+    ? isMoneyType
+      ? selectedDonation.remaining_amount
+      : selectedDonation.amount
+    : null;
+
+  // Auto-fill when donation is selected
+  const handleDonationSelect = (id: number | "") => {
+    setSelectedDonationId(id);
+    if (id === "") { setQuantity(""); return; }
+    const donation = donations.find((d) => d.donation_id === id);
+    if (!donation) return;
+    const isMoney = MONEY_TYPES.includes(donation.type_name);
+    const available = isMoney ? donation.remaining_amount : donation.amount;
+    setQuantity(available !== null ? String(available) : "");
+  };
+
+  // ── Create distribution ────────────────────────────────────────────────────
+  const handleAllocate = async () => {
+    if (!allocateTarget || selectedDonationId === "") return;
+    const qty = parseFloat(quantity);
+    if (!qty || qty <= 0) { alert("Please enter a valid value."); return; }
+
+    setAllocating(true);
+    try {
+      const res = await fetch(`${BASE_URL}/distribution`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${getToken()}`,
+        },
+        body: JSON.stringify({
+          donation_id: selectedDonationId,
+          receiver_id: allocateTarget.receiver_id,
+          quantity: qty,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setAllocateTarget(null);
+        alert(`Distribution #${data.distribution_id} created successfully.`);
+      } else {
+        alert(data.message || "Failed to create distribution");
+      }
+    } catch {
+      alert("Network error.");
+    } finally {
+      setAllocating(false);
+    }
+  };
+
   // ── Create Receiver ────────────────────────────────────────────────────────
   const handleCreateReceiver = async () => {
     if (!receiverForm.name.trim() || !receiverForm.location.trim()) return;
@@ -103,25 +197,25 @@ const ReceiversTable: React.FC = () => {
           Authorization: `Bearer ${getToken()}`,
         },
         body: JSON.stringify({
-          name:             receiverForm.name.trim(),
-          location:         receiverForm.location.trim(),
-          contact_info:     receiverForm.contact_info.trim(),
-          sufficiency:      receiverForm.sufficiency,
+          name:              receiverForm.name.trim(),
+          location:          receiverForm.location.trim(),
+          contact_info:      receiverForm.contact_info.trim(),
+          sufficiency:       receiverForm.sufficiency,
           needs_description: receiverForm.needs_description.trim() || null,
-          priority:         receiverForm.priority,
+          priority:          receiverForm.priority,
         }),
       });
       const data = await res.json();
       if (data.success) {
         const newReceiver: Receiver = {
-          receiver_id:      data.receiver_id,
-          name:             receiverForm.name.trim(),
-          location:         receiverForm.location.trim(),
-          contact_info:     receiverForm.contact_info.trim(),
-          sufficiency:      receiverForm.sufficiency,
+          receiver_id:       data.receiver_id,
+          name:              receiverForm.name.trim(),
+          location:          receiverForm.location.trim(),
+          contact_info:      receiverForm.contact_info.trim(),
+          sufficiency:       receiverForm.sufficiency,
           needs_description: receiverForm.needs_description.trim() || null,
-          priority:         receiverForm.priority,
-          is_orphanage:     0,
+          priority:          receiverForm.priority,
+          is_orphanage:      0,
         };
         setReceivers((prev) => [...prev, newReceiver]);
         setShowReceiverModal(false);
@@ -153,14 +247,14 @@ const ReceiversTable: React.FC = () => {
       const data = await res.json();
       if (data.success) {
         const newOrphanage: Receiver = {
-          receiver_id:      data.receiver_id,
-          name:             orphanageForm.name.trim(),
-          location:         orphanageForm.location.trim(),
-          contact_info:     orphanageForm.contact_info.trim(),
-          sufficiency:      "not_self_sufficient",
+          receiver_id:       data.receiver_id,
+          name:              orphanageForm.name.trim(),
+          location:          orphanageForm.location.trim(),
+          contact_info:      orphanageForm.contact_info.trim(),
+          sufficiency:       "not_self_sufficient",
           needs_description: null,
-          priority:         null,
-          is_orphanage:     1,
+          priority:          null,
+          is_orphanage:      1,
         };
         setReceivers((prev) => [...prev, newOrphanage]);
         setShowOrphanageModal(false);
@@ -195,7 +289,7 @@ const ReceiversTable: React.FC = () => {
     }
   };
 
-  // ── Derived data ───────────────────────────────────────────────────────────
+  // ── Derived ────────────────────────────────────────────────────────────────
   const filtered =
     filter === "all"
       ? receivers
@@ -211,6 +305,7 @@ const ReceiversTable: React.FC = () => {
 
   return (
     <div className="table-page">
+
       {/* ── Header ── */}
       <div className="page-header">
         <div>
@@ -218,16 +313,6 @@ const ReceiversTable: React.FC = () => {
           <p className="page-subtitle">Manage donation receivers and orphanages</p>
         </div>
         <div className="header-actions">
-          <button
-            className="add-orphanage-btn"
-            onClick={() => { setShowOrphanageModal(true); setOrphanageForm(EMPTY_ORPHANAGE); }}
-          >
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <line x1="12" y1="5" x2="12" y2="19" />
-              <line x1="5" y1="12" x2="19" y2="12" />
-            </svg>
-            Add Orphanage
-          </button>
           <button
             className="add-receiver-btn"
             onClick={() => { setShowReceiverModal(true); setReceiverForm(EMPTY_RECEIVER); }}
@@ -255,15 +340,13 @@ const ReceiversTable: React.FC = () => {
         ))}
       </div>
 
-      {/* ── Loading ── */}
+      {/* ── Loading / Error ── */}
       {loading && (
         <div className="loading-state">
           <div className="spinner" />
           <span>Loading receivers...</span>
         </div>
       )}
-
-      {/* ── Error ── */}
       {error && (
         <div className="error-state">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -296,7 +379,6 @@ const ReceiversTable: React.FC = () => {
                 <tr key={r.receiver_id} className="table-row">
                   <td className="row-num">{idx + 1}</td>
 
-                  {/* Receiver name + needs */}
                   <td>
                     <div className="user-cell">
                       <div className="user-avatar">
@@ -313,7 +395,6 @@ const ReceiversTable: React.FC = () => {
                     </div>
                   </td>
 
-                  {/* Orphanage / General badge */}
                   <td>
                     <span className={`type-badge type-badge-${r.is_orphanage ? "orphanage" : "general"}`}>
                       {r.is_orphanage ? "Orphanage" : "General"}
@@ -323,7 +404,6 @@ const ReceiversTable: React.FC = () => {
                   <td className="muted">{r.location || "—"}</td>
                   <td className="muted">{r.contact_info || "—"}</td>
 
-                  {/* Priority badge */}
                   <td>
                     {r.priority ? (
                       <span className={`status-badge priority-${r.priority}`}>
@@ -334,22 +414,28 @@ const ReceiversTable: React.FC = () => {
                     )}
                   </td>
 
-                  {/* Sufficiency badge */}
                   <td>
                     <span className={`status-badge sufficiency-${r.sufficiency === "self_sufficient" ? "self" : "not"}`}>
                       {r.sufficiency === "self_sufficient" ? "Self-sufficient" : "Needs Support"}
                     </span>
                   </td>
 
-                  {/* Delete */}
                   <td>
-                    <button
-                      className="reject-btn"
-                      onClick={() => setDeleteTarget(r)}
-                      disabled={actioningId === r.receiver_id}
-                    >
-                      {actioningId === r.receiver_id ? "..." : "Delete"}
-                    </button>
+                    <div className="action-btns">
+                      <button
+                        className="allocate-btn"
+                        onClick={() => openAllocateModal(r)}
+                      >
+                        Allocate
+                      </button>
+                      <button
+                        className="reject-btn"
+                        onClick={() => setDeleteTarget(r)}
+                        disabled={actioningId === r.receiver_id}
+                      >
+                        {actioningId === r.receiver_id ? "..." : "Delete"}
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -364,12 +450,111 @@ const ReceiversTable: React.FC = () => {
         </div>
       )}
 
+      {/* ══════════════════════════════════════════════════════════════════════
+          Allocate Modal
+      ══════════════════════════════════════════════════════════════════════ */}
+      {allocateTarget && (
+        <div className="modal-overlay" onClick={() => setAllocateTarget(null)}>
+          <div className="modal-box" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-title">Allocate Donation</div>
+            <p className="confirm-text">
+              Allocating resources to <strong>{allocateTarget.name}</strong>
+            </p>
+
+            {donationsLoading && (
+              <div className="loading-state" style={{ padding: "1rem 0" }}>
+                <div className="spinner" />
+                <span>Loading donations...</span>
+              </div>
+            )}
+
+            {donationsError && (
+              <div className="error-state">{donationsError}</div>
+            )}
+
+            {!donationsLoading && !donationsError && (
+              <>
+                {/* Donation selector */}
+                <div className="modal-field">
+                  <label>Select Donation</label>
+                  <select
+                    value={selectedDonationId}
+                    onChange={(e) =>
+                      handleDonationSelect(
+                        e.target.value === "" ? "" : Number(e.target.value)
+                      )
+                    }
+                  >
+                    <option value="">— Choose a donation —</option>
+                    {donations.map((d) => {
+                      const isMoney = MONEY_TYPES.includes(d.type_name);
+                      const avail = isMoney ? d.remaining_amount : d.amount;
+                      return (
+                        <option key={d.donation_id} value={d.donation_id}>
+                          #{d.donation_id} · {d.donor_name} · {d.type_name} · {isMoney ? "Remaining" : "Qty"}: {avail ?? 0}
+                        </option>
+                      );
+                    })}
+                  </select>
+                  {donations.length === 0 && (
+                    <p className="field-hint">No distributable donations available.</p>
+                  )}
+                </div>
+
+                {/* Available hint — only shown once a donation is selected */}
+                {selectedDonation && availableQty !== null && (
+                  <p className="field-hint">
+                    {isMoneyType ? "Remaining amount" : "Available quantity"}:{" "}
+                    <strong>{availableQty}</strong>
+                  </p>
+                )}
+
+                {/* Single input — label and placeholder change based on type */}
+                <div className="modal-field">
+                  <label>{selectedDonation ? inputLabel : "Amount / Quantity"}</label>
+                  <input
+                    type="number"
+                    min="1"
+                    max={availableQty ?? undefined}
+                    value={quantity}
+                    onChange={(e) => setQuantity(e.target.value)}
+                    placeholder={
+                      selectedDonation
+                        ? `Enter ${inputLabel.toLowerCase()} (max: ${availableQty ?? "—"})`
+                        : "Select a donation first"
+                    }
+                    disabled={selectedDonationId === ""}
+                  />
+                </div>
+              </>
+            )}
+
+            <div className="modal-actions">
+              <button className="modal-cancel-btn" onClick={() => setAllocateTarget(null)}>
+                Cancel
+              </button>
+              <button
+                className="modal-save-btn"
+                disabled={
+                  allocating ||
+                  selectedDonationId === "" ||
+                  !quantity ||
+                  Number(quantity) <= 0
+                }
+                onClick={handleAllocate}
+              >
+                {allocating ? "Allocating..." : "Confirm Allocation"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ── Add Receiver Modal ── */}
       {showReceiverModal && (
         <div className="modal-overlay" onClick={() => setShowReceiverModal(false)}>
           <div className="modal-box" onClick={(e) => e.stopPropagation()}>
             <div className="modal-title">Add Receiver</div>
-
             <div className="modal-field">
               <label>Name</label>
               <input
@@ -436,7 +621,6 @@ const ReceiversTable: React.FC = () => {
                 placeholder="Describe what this receiver needs (optional)"
               />
             </div>
-
             <div className="modal-actions">
               <button className="modal-cancel-btn" onClick={() => setShowReceiverModal(false)}>
                 Cancel
@@ -458,7 +642,6 @@ const ReceiversTable: React.FC = () => {
         <div className="modal-overlay" onClick={() => setShowOrphanageModal(false)}>
           <div className="modal-box" onClick={(e) => e.stopPropagation()}>
             <div className="modal-title">Add Orphanage</div>
-
             <div className="modal-field">
               <label>Orphanage Name</label>
               <input
@@ -486,7 +669,6 @@ const ReceiversTable: React.FC = () => {
                 placeholder="Phone or email"
               />
             </div>
-
             <div className="modal-actions">
               <button className="modal-cancel-btn" onClick={() => setShowOrphanageModal(false)}>
                 Cancel

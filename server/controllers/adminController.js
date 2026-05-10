@@ -3,18 +3,38 @@ import db from "../db.js";
 // @desc    Get all donations (admin only)
 // @route   GET /api/admin/donations
 // @access  Private/Admin
+// @desc    Get all donations (admin only)
+// @route   GET /api/admin/donations
+// @access  Private/Admin
+//
+// Query param: ?distributable=1  → only approved / partially_distributed rows
+// and includes remaining_amount for the allocate modal.
 export const getAllDonations = async (req, res) => {
   try {
     const promiseDb = db.promise();
+    const distributableOnly = req.query.distributable === "1";
+
+    const whereClause = distributableOnly
+      ? `WHERE d.status IN ('approved', 'partially_distributed')`
+      : "";
 
     const [donations] = await promiseDb.query(`
-            SELECT d.donation_id, u.name as donor_name, u.email, dt.type_name, 
-                   d.amount, d.date, d.status, d.campaign_id
-            FROM Donation d
-            JOIN Users u ON d.user_id = u.user_id
-            JOIN Donation_Type dt ON d.donation_type_id = dt.donation_type_id
-            ORDER BY d.date DESC
-        `);
+      SELECT
+        d.donation_id,
+        u.name         AS donor_name,
+        u.email,
+        dt.type_name,
+        d.amount,
+        d.remaining_amount,
+        d.date,
+        d.status,
+        d.campaign_id
+      FROM Donation d
+      JOIN Users         u  ON d.user_id         = u.user_id
+      JOIN Donation_Type dt ON d.donation_type_id = dt.donation_type_id
+      ${whereClause}
+      ORDER BY d.date DESC
+    `);
 
     res.json({
       success: true,
@@ -875,7 +895,7 @@ export const getAllInterns = async (req, res) => {
   try {
     const promiseDb = db.promise();
     const [interns] = await promiseDb.query(
-      "SELECT * FROM Intern WHERE status = 'approved' ORDER BY end_date ASC",
+      "SELECT * FROM Intern  ORDER BY end_date ASC",
     );
     res.json({ success: true, count: interns.length, interns });
   } catch (error) {

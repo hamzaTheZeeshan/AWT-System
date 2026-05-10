@@ -8,6 +8,7 @@ import ReceiversTable from "./ReceiversTable";
 import Campaigns from "./Campaigns";
 import OrphanagesTable from "./OrphanagesTable";
 import InternManager from "../InternshipManager/InternManager";
+import DistributionManager from "../Distribution/DistributionManager";
 
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState("users");
@@ -26,6 +27,8 @@ const App: React.FC = () => {
         return <OrphanagesTable />
       case "internships":
         return <InternManager />
+      case "distributions":
+        return <DistributionManager />
       default:
         return <UsersTable />;
     }

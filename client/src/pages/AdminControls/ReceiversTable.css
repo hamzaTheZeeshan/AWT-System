@@ -250,3 +250,77 @@
   line-height: 1.5;
 }
 .confirm-text strong { color: var(--color-text); }
+
+/* ── Add these to your ReceiversTable.css ── */
+
+/* Wraps Allocate + Delete side by side */
+.action-btns {
+  display: flex;
+  gap: 0.4rem;
+  align-items: center;
+}
+
+/* Allocate button */
+.allocate-btn {
+  padding: 0.35rem 0.75rem;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  font-size: 0.78rem;
+  font-weight: 600;
+  background-color: #0d9488;
+  color: #fff;
+  transition: background-color 0.15s ease, opacity 0.15s ease;
+  white-space: nowrap;
+}
+
+.allocate-btn:hover:not(:disabled) {
+  background-color: #0f766e;
+}
+
+.allocate-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Small hint under fields in modal */
+.field-hint {
+  margin: 0.25rem 0 0.75rem;
+  font-size: 0.8rem;
+  color: var(--color-muted, #6b7280);
+}
+/* ── Add these to your ReceiversTable.css ── */
+
+.action-btns {
+  display: flex;
+  gap: 0.4rem;
+  align-items: center;
+}
+
+.allocate-btn {
+  padding: 0.35rem 0.75rem;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  font-size: 0.78rem;
+  font-weight: 600;
+  background-color: #0d9488;
+  color: #fff;
+  transition: background-color 0.15s ease, opacity 0.15s ease;
+  white-space: nowrap;
+}
+
+.allocate-btn:hover:not(:disabled) {
+  background-color: #0f766e;
+}
+
+.allocate-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.field-hint {
+  margin: 0.25rem 0 0.75rem;
+  font-size: 0.8rem;
+  color: var(--color-muted, #6b7280);
+}

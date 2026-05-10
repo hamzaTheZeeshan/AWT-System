@@ -23,7 +23,16 @@ const BASE_URL = "http://localhost:5000/api";
 const EMPTY_FORM: InternForm = { name: "", role: "", assigned_task: "", end_date: "", user_id: "" };
 
 const getToken = () => sessionStorage.getItem("token");
-const getInitials = (name: string) => name.split(" ").slice(0, 2).map((w) => w[0]).join("").toUpperCase();
+const getInitials = (name?: string | null) => {
+  if (!name) return "NA";
+
+  return name
+    .split(" ")
+    .slice(0, 2)
+    .map((w) => w[0])
+    .join("")
+    .toUpperCase();
+};
 const formatDate = (iso: string) => {
   if (!iso) return "—";
   return new Date(iso).toLocaleDateString("en-PK", { day: "2-digit", month: "short", year: "numeric" });
@@ -48,7 +57,11 @@ const InternManager: React.FC = () => {
     try {
       const res = await fetch(`${BASE_URL}/admin/interns`, { headers: { Authorization: `Bearer ${getToken()}` } });
       const data = await res.json();
-      data.success ? setInterns(data.interns) : setError(data.message || "Failed to fetch interns");
+      if (data.success) {
+        setInterns(data.interns);
+      } else {
+        setError(data.message || "Failed to fetch interns");
+      }
     } catch { setError("Network error. Please try again."); }
     finally { setLoading(false); }
   };
@@ -70,7 +83,13 @@ const InternManager: React.FC = () => {
     try {
       const res = await fetch(`${BASE_URL}/admin/interns`, { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${getToken()}` }, body: JSON.stringify({ name: form.name, role: form.role, assigned_task: form.assigned_task, end_date: form.end_date, user_id: form.user_id ? Number(form.user_id) : null }) });
       const data = await res.json();
-      data.success ? (setModalMode(null), fetchInterns()) : setFormError(data.message || "Failed to create intern");
+      // FIX: replaced ternary expression with if/else (no-unused-expressions)
+      if (data.success) {
+        setModalMode(null);
+        fetchInterns();
+      } else {
+        setFormError(data.message || "Failed to create intern");
+      }
     } catch { setFormError("Network error."); }
     finally { setSaving(false); }
   };
@@ -82,7 +101,13 @@ const InternManager: React.FC = () => {
     try {
       const res = await fetch(`${BASE_URL}/admin/interns/${editTarget.intern_id}`, { method: "PUT", headers: { "Content-Type": "application/json", Authorization: `Bearer ${getToken()}` }, body: JSON.stringify({ name: form.name, role: form.role, assigned_task: form.assigned_task, end_date: form.end_date }) });
       const data = await res.json();
-      data.success ? (setModalMode(null), fetchInterns()) : setFormError(data.message || "Failed to update intern");
+      // FIX: replaced ternary expression with if/else (no-unused-expressions)
+      if (data.success) {
+        setModalMode(null);
+        fetchInterns();
+      } else {
+        setFormError(data.message || "Failed to update intern");
+      }
     } catch { setFormError("Network error."); }
     finally { setSaving(false); }
   };
@@ -93,12 +118,29 @@ const InternManager: React.FC = () => {
     try {
       const res = await fetch(`${BASE_URL}/admin/interns/${deleteTarget.intern_id}`, { method: "DELETE", headers: { Authorization: `Bearer ${getToken()}` } });
       const data = await res.json();
-      data.success ? (setDeleteTarget(null), fetchInterns()) : alert(data.message || "Failed to delete intern");
+      // FIX: replaced ternary expression with if/else (no-unused-expressions)
+      if (data.success) {
+        setDeleteTarget(null);
+        fetchInterns();
+      } else {
+        alert(data.message || "Failed to delete intern");
+      }
     } catch { alert("Network error."); }
     finally { setDeleting(false); }
   };
 
-  const filtered = interns.filter((i) => i.name.toLowerCase().includes(search.toLowerCase()) || i.role.toLowerCase().includes(search.toLowerCase()) || i.assigned_task.toLowerCase().includes(search.toLowerCase()));
+  const filtered = interns.filter((i) => {
+    const name = i.name?.toLowerCase() || "";
+    const role = i.role?.toLowerCase() || "";
+    const task = i.assigned_task?.toLowerCase() || "";
+    const query = search.toLowerCase();
+
+    return (
+      name.includes(query) ||
+      role.includes(query) ||
+      task.includes(query)
+    );
+  });
   const total = interns.length;
   const active = interns.filter((i) => daysLeft(i.end_date) > 0).length;
   const expiring = interns.filter((i) => daysLeft(i.end_date) > 0 && daysLeft(i.end_date) <= 14).length;

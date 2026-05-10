@@ -78,6 +78,23 @@ const navItems = [
         <path d="M18 12h-3v3" />
       </svg>
     ),
+  },
+  {
+    id: "distributions",
+    label: "Distributions",
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        {/* Graduation cap */}
+        <path d="M2 9l10-5 10 5-10 5-10-5z" />
+        <path d="M6 11v4c0 2 3 4 6 4s6-2 6-4v-4" />
+        <path d="M22 9v6" />
+        <circle cx="22" cy="15" r="1" />
+
+        {/* Growth arrow */}
+        <path d="M4 20l4-4 3 3 7-7" />
+        <path d="M18 12h-3v3" />
+      </svg>
+    ),
   }
 ];
 
