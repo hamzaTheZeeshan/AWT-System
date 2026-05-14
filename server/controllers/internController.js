@@ -8,8 +8,6 @@ export const applyForInternship = async (req, res) => {
     const { role, assigned_task, end_date } = req.body;
     const user_id = req.user.user_id;
 
-    const promiseDb = db.promise();
-
     if (!role || !assigned_task || !end_date) {
       return res.status(400).json({
         success: false,
@@ -17,26 +15,24 @@ export const applyForInternship = async (req, res) => {
       });
     }
 
-    // 🔥 Step 2 FIX: Get user name from DB (NOT JWT)
-    const [userRows] = await promiseDb.query(
-      "SELECT name FROM Users WHERE user_id = ?",
+    const userRows = await db.query(
+      "SELECT name FROM Users WHERE user_id = $1",
       [user_id]
     );
 
-    if (!userRows.length) {
+    if (!userRows.rows.length) {
       return res.status(404).json({
         success: false,
         message: "User not found",
       });
     }
 
-    const userName = userRows[0].name;
+    const userName = userRows.rows[0].name;
 
-    // Insert application
-    await promiseDb.query(
+    await db.query(
       `INSERT INTO Intern 
        (user_id, name, role, assigned_task, end_date, status, applied_at)
-       VALUES (?, ?, ?, ?, ?, 'pending', NOW())`,
+       VALUES ($1, $2, $3, $4, $5, 'pending', NOW())`,
       [user_id, userName, role, assigned_task, end_date]
     );
 
@@ -59,19 +55,18 @@ export const applyForInternship = async (req, res) => {
 export const getMyApplications = async (req, res) => {
   try {
     const user_id = req.user.user_id;
-    const promiseDb = db.promise();
 
-    const [applications] = await promiseDb.query(
+    const applications = await db.query(
       `SELECT intern_id, role, assigned_task, end_date, status, applied_at, rejected_reason
        FROM Intern 
-       WHERE user_id = ? 
+       WHERE user_id = $1 
        ORDER BY applied_at DESC`,
       [user_id]
     );
 
     return res.json({
       success: true,
-      applications,
+      applications: applications.rows,
     });
   } catch (error) {
     console.error("getMyApplications error:", error);

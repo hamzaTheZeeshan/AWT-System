@@ -3,22 +3,15 @@ import db from "../db.js";
 // @desc    Get all donations (admin only)
 // @route   GET /api/admin/donations
 // @access  Private/Admin
-// @desc    Get all donations (admin only)
-// @route   GET /api/admin/donations
-// @access  Private/Admin
-//
-// Query param: ?distributable=1  → only approved / partially_distributed rows
-// and includes remaining_amount for the allocate modal.
 export const getAllDonations = async (req, res) => {
   try {
-    const promiseDb = db.promise();
     const distributableOnly = req.query.distributable === "1";
 
     const whereClause = distributableOnly
       ? `WHERE d.status IN ('approved', 'partially_distributed')`
       : "";
 
-    const [donations] = await promiseDb.query(`
+    const result = await db.query(`
       SELECT
         d.donation_id,
         u.name         AS donor_name,
@@ -38,8 +31,8 @@ export const getAllDonations = async (req, res) => {
 
     res.json({
       success: true,
-      count: donations.length,
-      donations,
+      count: result.rows.length,
+      donations: result.rows,
     });
   } catch (error) {
     console.error(error);
@@ -53,25 +46,20 @@ export const getAllDonations = async (req, res) => {
 export const approveDonation = async (req, res) => {
   try {
     const donation_id = req.params.id;
-    const promiseDb = db.promise();
 
-    // 1. Fetch donation details
-    const [donation] = await promiseDb.query(
+    const donation = await db.query(
       `SELECT d.*, c.target_amount, c.amount_raised 
        FROM Donation d
        LEFT JOIN Campaign c ON d.campaign_id = c.campaign_id
-       WHERE d.donation_id = ?`,
-      [donation_id],
+       WHERE d.donation_id = $1`,
+      [donation_id]
     );
-    if (donation.length === 0) {
-      return res
-        .status(404)
-        .json({ success: false, message: "Donation not found" });
+    if (donation.rows.length === 0) {
+      return res.status(404).json({ success: false, message: "Donation not found" });
     }
 
-    const donationData = donation[0];
+    const donationData = donation.rows[0];
 
-    // 2. If already approved or distributed, reject
     if (donationData.status !== "pending") {
       return res.status(400).json({
         success: false,
@@ -79,7 +67,6 @@ export const approveDonation = async (req, res) => {
       });
     }
 
-    // 3. For campaign donations: check if amount would exceed target
     if (donationData.campaign_id) {
       const remaining =
         donationData.target_amount - (donationData.amount_raised || 0);
@@ -91,52 +78,45 @@ export const approveDonation = async (req, res) => {
       }
     }
 
-    // 4. Update donation status to 'approved'
-    await promiseDb.query(
-      "UPDATE Donation SET status = 'approved' WHERE donation_id = ?",
-      [donation_id],
+    await db.query(
+      "UPDATE Donation SET status = 'approved' WHERE donation_id = $1",
+      [donation_id]
     );
 
-    // 5. If campaign donation: increment campaign amount_raised
     if (donationData.campaign_id) {
-      await promiseDb.query(
-        "UPDATE Campaign SET amount_raised = amount_raised + ? WHERE campaign_id = ?",
-        [donationData.amount, donationData.campaign_id],
+      await db.query(
+        "UPDATE Campaign SET amount_raised = amount_raised + $1 WHERE campaign_id = $2",
+        [donationData.amount, donationData.campaign_id]
       );
     }
 
-    // 6. If orphanage donation (orphanage_id exists): auto-create Distribution record
     if (donationData.orphanage_id) {
       let quantity = 1;
       const donationTypeId = donationData.donation_type_id;
 
       if (donationTypeId === 4) {
-        // Clothes
-        const [clothesSum] = await promiseDb.query(
-          "SELECT SUM(quantity) as total FROM Clothes WHERE donation_id = ?",
-          [donation_id],
+        const clothesSum = await db.query(
+          "SELECT SUM(quantity) as total FROM Clothes WHERE donation_id = $1",
+          [donation_id]
         );
-        quantity = clothesSum[0].total || 1;
+        quantity = clothesSum.rows[0].total || 1;
       } else if (donationTypeId === 5) {
-        // Books
-        const [booksSum] = await promiseDb.query(
-          "SELECT SUM(quantity) as total FROM Books WHERE donation_id = ?",
-          [donation_id],
+        const booksSum = await db.query(
+          "SELECT SUM(quantity) as total FROM Books WHERE donation_id = $1",
+          [donation_id]
         );
-        quantity = booksSum[0].total || 1;
+        quantity = booksSum.rows[0].total || 1;
       } else {
         quantity = donationData.amount || 1;
       }
 
-      // AUTO_INCREMENT handles distribution_id — no manual ID needed
-      await promiseDb.query(
+      await db.query(
         `INSERT INTO Distribution (donation_id, orphanage_id, date, quantity)
-         VALUES (?, ?, CURDATE(), ?)`,
-        [donation_id, donationData.orphanage_id, quantity],
+         VALUES ($1, $2, CURRENT_DATE, $3)`,
+        [donation_id, donationData.orphanage_id, quantity]
       );
     }
 
-    // 7. Return success
     res.json({
       success: true,
       message: "Donation approved successfully",
@@ -157,21 +137,18 @@ export const approveDonation = async (req, res) => {
 export const rejectDonation = async (req, res) => {
   try {
     const donation_id = req.params.id;
-    const promiseDb = db.promise();
 
-    const [donation] = await promiseDb.query(
-      "SELECT * FROM Donation WHERE donation_id = ?",
-      [donation_id],
+    const donation = await db.query(
+      "SELECT * FROM Donation WHERE donation_id = $1",
+      [donation_id]
     );
-    if (donation.length === 0) {
-      return res
-        .status(404)
-        .json({ success: false, message: "Donation not found" });
+    if (donation.rows.length === 0) {
+      return res.status(404).json({ success: false, message: "Donation not found" });
     }
 
-    await promiseDb.query(
-      'UPDATE Donation SET status = "rejected" WHERE donation_id = ?',
-      [donation_id],
+    await db.query(
+      "UPDATE Donation SET status = 'rejected' WHERE donation_id = $1",
+      [donation_id]
     );
 
     res.json({
@@ -191,18 +168,16 @@ export const rejectDonation = async (req, res) => {
 // @access  Private/Admin
 export const getAllUsers = async (req, res) => {
   try {
-    const promiseDb = db.promise();
-
-    const [users] = await promiseDb.query(`
-            SELECT user_id, name, email, phone, role
-            FROM Users
-            ORDER BY user_id
-        `);
+    const result = await db.query(`
+      SELECT user_id, name, email, phone, role
+      FROM Users
+      ORDER BY user_id
+    `);
 
     res.json({
       success: true,
-      count: users.length,
-      users,
+      count: result.rows.length,
+      users: result.rows,
     });
   } catch (error) {
     console.error(error);
@@ -216,20 +191,16 @@ export const getAllUsers = async (req, res) => {
 export const deleteUser = async (req, res) => {
   try {
     const user_id = req.params.id;
-    const promiseDb = db.promise();
 
-    const [user] = await promiseDb.query(
-      "SELECT * FROM Users WHERE user_id = ?",
-      [user_id],
+    const user = await db.query(
+      "SELECT * FROM Users WHERE user_id = $1",
+      [user_id]
     );
 
-    if (user.length === 0) {
-      return res
-        .status(404)
-        .json({ success: false, message: "User not found" });
+    if (user.rows.length === 0) {
+      return res.status(404).json({ success: false, message: "User not found" });
     }
 
-    // Don't allow admin to delete themselves
     if (user_id == req.user.user_id) {
       return res.status(400).json({
         success: false,
@@ -237,12 +208,9 @@ export const deleteUser = async (req, res) => {
       });
     }
 
-    await promiseDb.query("DELETE FROM Users WHERE user_id = ?", [user_id]);
+    await db.query("DELETE FROM Users WHERE user_id = $1", [user_id]);
 
-    res.json({
-      success: true,
-      message: "User deleted successfully",
-    });
+    res.json({ success: true, message: "User deleted successfully" });
   } catch (error) {
     console.error(error);
     res.status(500).json({ success: false, message: "Server error" });
@@ -254,52 +222,45 @@ export const deleteUser = async (req, res) => {
 // @access  Private/Admin
 export const getStats = async (req, res) => {
   try {
-    const promiseDb = db.promise();
+    const totalMoney = await db.query(`
+      SELECT SUM(amount) as total 
+      FROM Donation 
+      WHERE donation_type_id IN (1,2,3) AND status = 'approved'
+    `);
 
-    // Total donations amount (approved only, monetary types)
-    const [totalMoney] = await promiseDb.query(`
-            SELECT SUM(amount) as total 
-            FROM Donation 
-            WHERE donation_type_id IN (1,2,3) AND status = 'approved'
-        `);
+    const totalDonations = await db.query(`
+      SELECT COUNT(*) as count 
+      FROM Donation 
+      WHERE status = 'approved'
+    `);
 
-    // Total number of approved donations
-    const [totalDonations] = await promiseDb.query(`
-            SELECT COUNT(*) as count 
-            FROM Donation 
-            WHERE status = 'approved'
-        `);
+    const pendingDonations = await db.query(`
+      SELECT COUNT(*) as count 
+      FROM Donation 
+      WHERE status = 'pending'
+    `);
 
-    // Pending donations count
-    const [pendingDonations] = await promiseDb.query(`
-            SELECT COUNT(*) as count 
-            FROM Donation 
-            WHERE status = 'pending'
-        `);
+    const totalUsers = await db.query(`
+      SELECT COUNT(*) as count 
+      FROM Users
+    `);
 
-    // Total users count
-    const [totalUsers] = await promiseDb.query(`
-            SELECT COUNT(*) as count 
-            FROM Users
-        `);
-
-    // Donation by type
-    const [byType] = await promiseDb.query(`
-            SELECT dt.type_name, COUNT(*) as count, SUM(d.amount) as total_amount
-            FROM Donation d
-            JOIN Donation_Type dt ON d.donation_type_id = dt.donation_type_id
-            WHERE d.status = 'approved'
-            GROUP BY dt.type_name
-        `);
+    const byType = await db.query(`
+      SELECT dt.type_name, COUNT(*) as count, SUM(d.amount) as total_amount
+      FROM Donation d
+      JOIN Donation_Type dt ON d.donation_type_id = dt.donation_type_id
+      WHERE d.status = 'approved'
+      GROUP BY dt.type_name
+    `);
 
     res.json({
       success: true,
       stats: {
-        total_money_collected: totalMoney[0].total || 0,
-        total_donations_count: totalDonations[0].count || 0,
-        pending_donations: pendingDonations[0].count || 0,
-        total_users: totalUsers[0].count || 0,
-        donations_by_type: byType,
+        total_money_collected: totalMoney.rows[0].total || 0,
+        total_donations_count: totalDonations.rows[0].count || 0,
+        pending_donations: pendingDonations.rows[0].count || 0,
+        total_users: totalUsers.rows[0].count || 0,
+        donations_by_type: byType.rows,
       },
     });
   } catch (error) {
@@ -314,14 +275,12 @@ export const getStats = async (req, res) => {
 export const createDistribution = async (req, res) => {
   try {
     const { donation_id, receiver_id, orphanage_id, quantity } = req.body;
-    const promiseDb = db.promise();
 
-    // 1. Check if donation exists and is approved or partially_distributed
-    const [donation] = await promiseDb.query(
-      'SELECT * FROM Donation WHERE donation_id = ? AND status IN ("approved", "partially_distributed")',
-      [donation_id],
+    const donation = await db.query(
+      "SELECT * FROM Donation WHERE donation_id = $1 AND status IN ('approved', 'partially_distributed')",
+      [donation_id]
     );
-    if (donation.length === 0) {
+    if (donation.rows.length === 0) {
       return res.status(404).json({
         success: false,
         message:
@@ -329,36 +288,31 @@ export const createDistribution = async (req, res) => {
       });
     }
 
-    const donationData = donation[0];
+    const donationData = donation.rows[0];
     let availableQty = null;
     const isMoneyDonation = [1, 2, 3].includes(donationData.donation_type_id);
 
-    // 2. Calculate available quantity
     if (isMoneyDonation) {
       availableQty = donationData.remaining_amount || 0;
     } else if (donationData.donation_type_id === 4) {
-      // Clothes
-      const [clothes] = await promiseDb.query(
-        "SELECT SUM(quantity) as total FROM Clothes WHERE donation_id = ?",
-        [donation_id],
+      const clothes = await db.query(
+        "SELECT SUM(quantity) as total FROM Clothes WHERE donation_id = $1",
+        [donation_id]
       );
-      availableQty = clothes[0].total || 0;
+      availableQty = clothes.rows[0].total || 0;
     } else if (donationData.donation_type_id === 5) {
-      // Books
-      const [books] = await promiseDb.query(
-        "SELECT SUM(quantity) as total FROM Books WHERE donation_id = ?",
-        [donation_id],
+      const books = await db.query(
+        "SELECT SUM(quantity) as total FROM Books WHERE donation_id = $1",
+        [donation_id]
       );
-      availableQty = books[0].total || 0;
+      availableQty = books.rows[0].total || 0;
     }
 
     if (!availableQty || availableQty <= 0) {
-      return res
-        .status(400)
-        .json({
-          success: false,
-          message: "No remaining quantity to distribute",
-        });
+      return res.status(400).json({
+        success: false,
+        message: "No remaining quantity to distribute",
+      });
     }
     if (quantity > availableQty) {
       return res.status(400).json({
@@ -367,70 +321,61 @@ export const createDistribution = async (req, res) => {
       });
     }
 
-    // 3. Validate destination (receiver or orphanage)
     if ((receiver_id && orphanage_id) || (!receiver_id && !orphanage_id)) {
       return res.status(400).json({
         success: false,
-        message:
-          "Provide either receiver_id or orphanage_id, not both, not none.",
+        message: "Provide either receiver_id or orphanage_id, not both, not none.",
       });
     }
 
     if (receiver_id) {
-      // ✅ Table name corrected to 'receiver'
-      const [receiver] = await promiseDb.query(
-        "SELECT * FROM receiver WHERE receiver_id = ?",
-        [receiver_id],
+      const receiver = await db.query(
+        "SELECT * FROM receiver WHERE receiver_id = $1",
+        [receiver_id]
       );
-      if (receiver.length === 0)
-        return res
-          .status(404)
-          .json({ success: false, message: "Receiver not found" });
+      if (receiver.rows.length === 0)
+        return res.status(404).json({ success: false, message: "Receiver not found" });
     }
     if (orphanage_id) {
-      const [orphanage] = await promiseDb.query(
-        "SELECT * FROM Orphanage WHERE orphanage_id = ?",
-        [orphanage_id],
+      const orphanage = await db.query(
+        "SELECT * FROM Orphanage WHERE orphanage_id = $1",
+        [orphanage_id]
       );
-      if (orphanage.length === 0)
-        return res
-          .status(404)
-          .json({ success: false, message: "Orphanage not found" });
+      if (orphanage.rows.length === 0)
+        return res.status(404).json({ success: false, message: "Orphanage not found" });
     }
 
-    // 4. Insert distribution – AUTO_INCREMENT handles distribution_id
-    const [result] = await promiseDb.query(
+    const result = await db.query(
       `INSERT INTO Distribution (donation_id, receiver_id, orphanage_id, date, quantity)
-       VALUES (?, ?, ?, CURDATE(), ?)`,
-      [donation_id, receiver_id || null, orphanage_id || null, quantity],
+       VALUES ($1, $2, $3, CURRENT_DATE, $4)
+       RETURNING distribution_id`,
+      [donation_id, receiver_id || null, orphanage_id || null, quantity]
     );
 
-    // 5. Update remaining amount / quantity
     if (isMoneyDonation) {
       const newRemaining = donationData.remaining_amount - quantity;
       if (newRemaining <= 0) {
-        await promiseDb.query(
-          'UPDATE Donation SET remaining_amount = 0, status = "distributed" WHERE donation_id = ?',
-          [donation_id],
+        await db.query(
+          "UPDATE Donation SET remaining_amount = 0, status = 'distributed' WHERE donation_id = $1",
+          [donation_id]
         );
       } else {
-        await promiseDb.query(
-          'UPDATE Donation SET remaining_amount = ?, status = "partially_distributed" WHERE donation_id = ?',
-          [newRemaining, donation_id],
+        await db.query(
+          "UPDATE Donation SET remaining_amount = $1, status = 'partially_distributed' WHERE donation_id = $2",
+          [newRemaining, donation_id]
         );
       }
     } else {
-      // For clothes/books, mark donation as distributed (full distribution assumed)
-      await promiseDb.query(
-        'UPDATE Donation SET status = "distributed" WHERE donation_id = ?',
-        [donation_id],
+      await db.query(
+        "UPDATE Donation SET status = 'distributed' WHERE donation_id = $1",
+        [donation_id]
       );
     }
 
     res.status(201).json({
       success: true,
       message: "Distribution created successfully",
-      distribution_id: result.insertId,
+      distribution_id: result.rows[0].distribution_id,
     });
   } catch (error) {
     console.error(error);
@@ -443,8 +388,7 @@ export const createDistribution = async (req, res) => {
 // @access  Private/Admin
 export const getAllDistributions = async (req, res) => {
   try {
-    const promiseDb = db.promise();
-    const [distributions] = await promiseDb.query(`
+    const result = await db.query(`
       SELECT dist.*,
              COALESCE(r.name, o.name) as receiver_name,
              CASE
@@ -452,11 +396,11 @@ export const getAllDistributions = async (req, res) => {
                WHEN dist.orphanage_id IS NOT NULL THEN 'orphanage'
              END as receiver_type
       FROM Distribution dist
-      LEFT JOIN receiver r ON dist.receiver_id = r.receiver_id   -- ✅ corrected table name
+      LEFT JOIN receiver r ON dist.receiver_id = r.receiver_id
       LEFT JOIN Orphanage o ON dist.orphanage_id = o.orphanage_id
       ORDER BY dist.date DESC
     `);
-    res.json({ success: true, count: distributions.length, distributions });
+    res.json({ success: true, count: result.rows.length, distributions: result.rows });
   } catch (error) {
     console.error(error);
     res.status(500).json({ success: false, message: "Server error" });
@@ -469,18 +413,16 @@ export const getAllDistributions = async (req, res) => {
 export const createCampaign = async (req, res) => {
   try {
     const { title, description, target_amount, end_date } = req.body;
-    const promiseDb = db.promise();
-    const [maxId] = await promiseDb.query(
-      "SELECT MAX(campaign_id) as maxId FROM Campaign",
+
+    const maxId = await db.query("SELECT MAX(campaign_id) as maxId FROM Campaign");
+    const campaign_id = (maxId.rows[0].maxid || 0) + 1;
+
+    await db.query(
+      "INSERT INTO Campaign (campaign_id, title, description, target_amount, end_date) VALUES ($1, $2, $3, $4, $5)",
+      [campaign_id, title, description, target_amount, end_date]
     );
-    const campaign_id = (maxId[0].maxId || 0) + 1;
-    await promiseDb.query(
-      "INSERT INTO Campaign (campaign_id, title, description, target_amount, end_date) VALUES (?, ?, ?, ?, ?)",
-      [campaign_id, title, description, target_amount, end_date],
-    );
-    res
-      .status(201)
-      .json({ success: true, message: "Campaign created", campaign_id });
+
+    res.status(201).json({ success: true, message: "Campaign created", campaign_id });
   } catch (error) {
     console.error(error);
     res.status(500).json({ success: false, message: "Server error" });
@@ -494,11 +436,10 @@ export const updateCampaign = async (req, res) => {
   try {
     const { id } = req.params;
     const { title, description, target_amount, end_date } = req.body;
-    const promiseDb = db.promise();
 
-    await promiseDb.query(
-      "UPDATE Campaign SET title = ?, description = ?, target_amount = ?, end_date = ? WHERE campaign_id = ?",
-      [title, description, target_amount, end_date, id],
+    await db.query(
+      "UPDATE Campaign SET title = $1, description = $2, target_amount = $3, end_date = $4 WHERE campaign_id = $5",
+      [title, description, target_amount, end_date, id]
     );
 
     res.json({ success: true, message: "Campaign updated" });
@@ -514,9 +455,8 @@ export const updateCampaign = async (req, res) => {
 export const deleteCampaign = async (req, res) => {
   try {
     const { id } = req.params;
-    const promiseDb = db.promise();
 
-    await promiseDb.query("DELETE FROM Campaign WHERE campaign_id = ?", [id]);
+    await db.query("DELETE FROM Campaign WHERE campaign_id = $1", [id]);
 
     res.json({ success: true, message: "Campaign deleted" });
   } catch (error) {
@@ -530,9 +470,7 @@ export const deleteCampaign = async (req, res) => {
 // @access  Private/Admin
 export const getAllCampaigns = async (req, res) => {
   try {
-    const promiseDb = db.promise();
-
-    const [campaigns] = await promiseDb.query(`
+    const result = await db.query(`
       SELECT 
         c.campaign_id,
         c.title,
@@ -541,7 +479,7 @@ export const getAllCampaigns = async (req, res) => {
         c.end_date,
         COALESCE(c.amount_raised, 0) as amount_raised,
         CASE 
-          WHEN c.end_date < CURDATE() THEN 'expired'
+          WHEN c.end_date < CURRENT_DATE THEN 'expired'
           WHEN COALESCE(c.amount_raised, 0) >= c.target_amount THEN 'completed'
           ELSE 'active'
         END as status
@@ -549,27 +487,23 @@ export const getAllCampaigns = async (req, res) => {
       ORDER BY c.campaign_id
     `);
 
-    res.json({ success: true, campaigns });
+    res.json({ success: true, campaigns: result.rows });
   } catch (error) {
     console.error(error);
     res.status(500).json({ success: false, message: "Server error" });
   }
 };
 
-// @desc    Get all receivers (with orphanage flag)
-// @desc    Get all receivers (with orphanage flag and sufficiency)
-// @desc    Get all receivers (with orphanage flag and sufficiency)
 // @desc    Get all receivers (general receivers only – not orphanages)
 // @route   GET /api/admin/receivers
 export const getAllReceivers = async (req, res) => {
   try {
-    const promiseDb = db.promise();
-    const [receivers] = await promiseDb.query(`
+    const result = await db.query(`
       SELECT receiver_id, name, location, contact_info, sufficiency, needs_description, priority
-      FROM receiver   -- ✅ corrected table name
+      FROM receiver
       ORDER BY receiver_id
     `);
-    res.json({ success: true, count: receivers.length, receivers });
+    res.json({ success: true, count: result.rows.length, receivers: result.rows });
   } catch (error) {
     console.error(error);
     res.status(500).json({ success: false, message: "Server error" });
@@ -581,19 +515,12 @@ export const getAllReceivers = async (req, res) => {
 // @access  Private/Admin
 export const createReceiver = async (req, res) => {
   try {
-    const {
-      name,
-      location,
-      contact_info,
-      sufficiency,
-      needs_description,
-      priority,
-    } = req.body;
-    const promiseDb = db.promise();
-    // ✅ Table name corrected
-    const [result] = await promiseDb.query(
+    const { name, location, contact_info, sufficiency, needs_description, priority } = req.body;
+
+    const result = await db.query(
       `INSERT INTO receiver (name, location, contact_info, sufficiency, needs_description, priority)
-       VALUES (?, ?, ?, ?, ?, ?)`,
+       VALUES ($1, $2, $3, $4, $5, $6)
+       RETURNING receiver_id`,
       [
         name,
         location,
@@ -601,15 +528,14 @@ export const createReceiver = async (req, res) => {
         sufficiency || "not_self_sufficient",
         needs_description || null,
         priority || "medium",
-      ],
+      ]
     );
-    res
-      .status(201)
-      .json({
-        success: true,
-        message: "Receiver created",
-        receiver_id: result.insertId,
-      });
+
+    res.status(201).json({
+      success: true,
+      message: "Receiver created",
+      receiver_id: result.rows[0].receiver_id,
+    });
   } catch (error) {
     console.error(error);
     res.status(500).json({ success: false, message: "Server error" });
@@ -622,22 +548,19 @@ export const createReceiver = async (req, res) => {
 export const deleteReceiver = async (req, res) => {
   try {
     const { id } = req.params;
-    const promiseDb = db.promise();
 
-    const [dist] = await promiseDb.query(
-      "SELECT * FROM Distribution WHERE receiver_id = ?",
-      [id],
+    const dist = await db.query(
+      "SELECT * FROM Distribution WHERE receiver_id = $1",
+      [id]
     );
-    if (dist.length > 0) {
-      return res
-        .status(400)
-        .json({
-          success: false,
-          message: "Cannot delete: receiver has distributions",
-        });
+    if (dist.rows.length > 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Cannot delete: receiver has distributions",
+      });
     }
-    // ✅ Corrected table name
-    await promiseDb.query("DELETE FROM receiver WHERE receiver_id = ?", [id]);
+
+    await db.query("DELETE FROM receiver WHERE receiver_id = $1", [id]);
     res.json({ success: true, message: "Receiver deleted" });
   } catch (error) {
     console.error(error);
@@ -650,15 +573,13 @@ export const deleteReceiver = async (req, res) => {
 // @access  Private/Admin
 export const getAllOrphanages = async (req, res) => {
   try {
-    const promiseDb = db.promise();
-
-    const [orphanages] = await promiseDb.query(`
+    const result = await db.query(`
       SELECT orphanage_id, name, location, contact_info
       FROM Orphanage
       ORDER BY orphanage_id
     `);
 
-    res.json({ success: true, count: orphanages.length, orphanages });
+    res.json({ success: true, count: result.rows.length, orphanages: result.rows });
   } catch (error) {
     console.error(error);
     res.status(500).json({ success: false, message: "Server error" });
@@ -671,18 +592,16 @@ export const getAllOrphanages = async (req, res) => {
 export const createOrphanage = async (req, res) => {
   try {
     const { name, location, contact_info } = req.body;
-    const promiseDb = db.promise();
 
-    // AUTO_INCREMENT handles orphanage_id
-    const [result] = await promiseDb.query(
-      "INSERT INTO Orphanage (name, location, contact_info) VALUES (?, ?, ?)",
-      [name, location, contact_info],
+    const result = await db.query(
+      "INSERT INTO Orphanage (name, location, contact_info) VALUES ($1, $2, $3) RETURNING orphanage_id",
+      [name, location, contact_info]
     );
 
     res.status(201).json({
       success: true,
       message: "Orphanage created",
-      orphanage_id: result.insertId,
+      orphanage_id: result.rows[0].orphanage_id,
     });
   } catch (error) {
     console.error(error);
@@ -694,28 +613,24 @@ export const createOrphanage = async (req, res) => {
   }
 };
 
-// @desc    Delete an orphanage
-// @route   DELETE /api/admin/orphanages/:id
-// @access  Private/Admin
-
 // @desc    Create a new intern (admin)
 // @route   POST /api/admin/interns
 // @access  Private/Admin
 export const createIntern = async (req, res) => {
   try {
     const { name, role, assigned_task, end_date, user_id } = req.body;
-    const promiseDb = db.promise();
 
-    const [result] = await promiseDb.query(
+    const result = await db.query(
       `INSERT INTO Intern (user_id, name, role, assigned_task, end_date, status)
-       VALUES (?, ?, ?, ?, ?, 'approved')`,
+       VALUES ($1, $2, $3, $4, $5, 'approved')
+       RETURNING intern_id`,
       [user_id || null, name, role, assigned_task, end_date]
     );
 
     res.status(201).json({
       success: true,
       message: "Intern created",
-      intern_id: result.insertId,
+      intern_id: result.rows[0].intern_id,
     });
   } catch (error) {
     console.error(error);
@@ -730,11 +645,10 @@ export const updateIntern = async (req, res) => {
   try {
     const { id } = req.params;
     const { name, role, assigned_task, end_date } = req.body;
-    const promiseDb = db.promise();
 
-    await promiseDb.query(
-      "UPDATE Intern SET name = ?, role = ?, assigned_task = ?, end_date = ? WHERE intern_id = ?",
-      [name, role, assigned_task, end_date, id],
+    await db.query(
+      "UPDATE Intern SET name = $1, role = $2, assigned_task = $3, end_date = $4 WHERE intern_id = $5",
+      [name, role, assigned_task, end_date, id]
     );
 
     res.json({ success: true, message: "Intern updated" });
@@ -750,9 +664,8 @@ export const updateIntern = async (req, res) => {
 export const deleteIntern = async (req, res) => {
   try {
     const { id } = req.params;
-    const promiseDb = db.promise();
 
-    await promiseDb.query("DELETE FROM Intern WHERE intern_id = ?", [id]);
+    await db.query("DELETE FROM Intern WHERE intern_id = $1", [id]);
 
     res.json({ success: true, message: "Intern deleted" });
   } catch (error) {
@@ -761,20 +674,18 @@ export const deleteIntern = async (req, res) => {
   }
 };
 
-// @desc    Get all orphanages (admin only)
-// @route   GET /api/admin/orphanages
-
 // @desc    Update orphanage (admin only)
 // @route   PUT /api/admin/orphanages/:id
 export const updateOrphanage = async (req, res) => {
   try {
     const { id } = req.params;
     const { name, location, contact_info } = req.body;
-    const promiseDb = db.promise();
-    await promiseDb.query(
-      "UPDATE Orphanage SET name = ?, location = ?, contact_info = ? WHERE orphanage_id = ?",
-      [name, location, contact_info, id],
+
+    await db.query(
+      "UPDATE Orphanage SET name = $1, location = $2, contact_info = $3 WHERE orphanage_id = $4",
+      [name, location, contact_info, id]
     );
+
     res.json({ success: true, message: "Orphanage updated" });
   } catch (error) {
     console.error(error);
@@ -787,20 +698,20 @@ export const updateOrphanage = async (req, res) => {
 export const deleteOrphanage = async (req, res) => {
   try {
     const { id } = req.params;
-    const promiseDb = db.promise();
-    // Check if orphanage has distributions
-    const [dist] = await promiseDb.query(
-      "SELECT * FROM Distribution WHERE orphanage_id = ?",
-      [id],
+
+    const dist = await db.query(
+      "SELECT * FROM Distribution WHERE orphanage_id = $1",
+      [id]
     );
-    if (dist.length > 0) {
+    if (dist.rows.length > 0) {
       return res.status(400).json({
         success: false,
         message:
           "Cannot delete orphanage with existing distributions. Transfer or remove distributions first.",
       });
     }
-    await promiseDb.query("DELETE FROM Orphanage WHERE orphanage_id = ?", [id]);
+
+    await db.query("DELETE FROM Orphanage WHERE orphanage_id = $1", [id]);
     res.json({ success: true, message: "Orphanage deleted" });
   } catch (error) {
     console.error(error);
@@ -813,14 +724,20 @@ export const deleteOrphanage = async (req, res) => {
 // @access  Private/Admin
 export const getAllInternApplications = async (req, res) => {
   try {
-    const promiseDb = db.promise();
-    const [applications] = await promiseDb.query(`
+    const result = await db.query(`
       SELECT i.*, u.email
       FROM Intern i
       JOIN Users u ON i.user_id = u.user_id
-      ORDER BY FIELD(i.status, 'pending', 'approved', 'rejected'), i.applied_at ASC
+      ORDER BY
+        CASE i.status
+          WHEN 'pending'  THEN 1
+          WHEN 'approved' THEN 2
+          WHEN 'rejected' THEN 3
+          ELSE 4
+        END,
+        i.applied_at ASC
     `);
-    res.json({ success: true, applications });
+    res.json({ success: true, applications: result.rows });
   } catch (error) {
     console.error(error);
     res.status(500).json({ success: false, message: "Server error" });
@@ -833,24 +750,19 @@ export const getAllInternApplications = async (req, res) => {
 export const approveInternApplication = async (req, res) => {
   try {
     const { id } = req.params;
-    const promiseDb = db.promise();
 
-    const [app] = await promiseDb.query(
-      "SELECT * FROM Intern WHERE intern_id = ?",
-      [id],
+    const app = await db.query(
+      "SELECT * FROM Intern WHERE intern_id = $1",
+      [id]
     );
-    if (app.length === 0)
-      return res
-        .status(404)
-        .json({ success: false, message: "Application not found" });
-    if (app[0].status !== "pending")
-      return res
-        .status(400)
-        .json({ success: false, message: "Application already processed" });
+    if (app.rows.length === 0)
+      return res.status(404).json({ success: false, message: "Application not found" });
+    if (app.rows[0].status !== "pending")
+      return res.status(400).json({ success: false, message: "Application already processed" });
 
-    await promiseDb.query(
-      'UPDATE Intern SET status = "approved" WHERE intern_id = ?',
-      [id],
+    await db.query(
+      "UPDATE Intern SET status = 'approved' WHERE intern_id = $1",
+      [id]
     );
     res.json({ success: true, message: "Application approved" });
   } catch (error) {
@@ -866,24 +778,19 @@ export const rejectInternApplication = async (req, res) => {
   try {
     const { id } = req.params;
     const { rejected_reason } = req.body;
-    const promiseDb = db.promise();
 
-    const [app] = await promiseDb.query(
-      "SELECT * FROM Intern WHERE intern_id = ?",
-      [id],
+    const app = await db.query(
+      "SELECT * FROM Intern WHERE intern_id = $1",
+      [id]
     );
-    if (app.length === 0)
-      return res
-        .status(404)
-        .json({ success: false, message: "Application not found" });
-    if (app[0].status !== "pending")
-      return res
-        .status(400)
-        .json({ success: false, message: "Application already processed" });
+    if (app.rows.length === 0)
+      return res.status(404).json({ success: false, message: "Application not found" });
+    if (app.rows[0].status !== "pending")
+      return res.status(400).json({ success: false, message: "Application already processed" });
 
-    await promiseDb.query(
-      'UPDATE Intern SET status = "rejected", rejected_reason = ? WHERE intern_id = ?',
-      [rejected_reason || null, id],
+    await db.query(
+      "UPDATE Intern SET status = 'rejected', rejected_reason = $1 WHERE intern_id = $2",
+      [rejected_reason || null, id]
     );
     res.json({ success: true, message: "Application rejected" });
   } catch (error) {
@@ -891,13 +798,13 @@ export const rejectInternApplication = async (req, res) => {
     res.status(500).json({ success: false, message: "Server error" });
   }
 };
+
 export const getAllInterns = async (req, res) => {
   try {
-    const promiseDb = db.promise();
-    const [interns] = await promiseDb.query(
-      "SELECT * FROM Intern  ORDER BY end_date ASC",
+    const result = await db.query(
+      "SELECT * FROM Intern ORDER BY end_date ASC"
     );
-    res.json({ success: true, count: interns.length, interns });
+    res.json({ success: true, count: result.rows.length, interns: result.rows });
   } catch (error) {
     console.error(error);
     res.status(500).json({ success: false, message: "Server error" });

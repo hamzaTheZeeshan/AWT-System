@@ -1,18 +1,24 @@
-import mysql from "mysql2";
+import pg from "pg";
+import dotenv from "dotenv";
 
-const db = mysql.createConnection({
-  host: "localhost",
-  user: "root",
-  password: "crackz0795",
-  database: "awtDb",
+dotenv.config();
+
+const { Pool } = pg;
+
+const db = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: {
+    rejectUnauthorized: false,
+  },
 });
 
-db.connect((err) => {
-  if (err) {
+db.connect()
+  .then(() => {
+    console.log("PostgreSQL connected");
+    console.log("DATABASE_URL =", process.env.DATABASE_URL);
+  })
+  .catch((err) => {
     console.log("DB connection failed", err);
-  } else {
-    console.log("DB connected");
-  }
-});
+  });
 
 export default db;
