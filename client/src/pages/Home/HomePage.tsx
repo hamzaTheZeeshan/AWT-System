@@ -47,7 +47,6 @@ const HomePage: React.FC = () => {
         <nav className={`awt-nav__links ${menuOpen ? "awt-nav__links--open" : ""}`}>
           <Link to="/" className="awt-nav__link awt-nav__link--active">Home</Link>
           <Link to="/about" className="awt-nav__link">About</Link>
-          <Link to="/services" className="awt-nav__link">Services</Link>
           <Link to="/contact" className="awt-nav__link">Contact Us</Link>
           {userRole === "admin" && (
             <Link to="/admin" className="awt-nav__link awt-nav__link--admin">Admin Control</Link>
