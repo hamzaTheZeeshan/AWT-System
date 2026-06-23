@@ -5,28 +5,35 @@
 
 /* ── CSS VARIABLES ── */
 :root {
-  --clr-forest:   #2d5a27;   /* primary dark green  */
-  --clr-green:    #3d7a35;   /* mid green            */
-  --clr-sage:     #c8d9c3;   /* light sage           */
-  --clr-cream:    #f0f2ec;   /* page background      */
-  --clr-white:    #ffffff;
-  --clr-dark:     #1a2e18;   /* near-black text      */
-  --clr-muted:    #5a6e57;   /* secondary text       */
-  --clr-border:   #d5ddd1;
-  --clr-gold:     #d4a017;   /* accent (logo stars)  */
+  --clr-forest: #2d5a27;
+  /* primary dark green  */
+  --clr-green: #3d7a35;
+  /* mid green            */
+  --clr-sage: #c8d9c3;
+  /* light sage           */
+  --clr-cream: #f0f2ec;
+  /* page background      */
+  --clr-white: #ffffff;
+  --clr-dark: #1a2e18;
+  /* near-black text      */
+  --clr-muted: #5a6e57;
+  /* secondary text       */
+  --clr-border: #d5ddd1;
+  --clr-gold: #d4a017;
+  /* accent (logo stars)  */
 
-  --nav-height:   72px;
-  --radius-sm:    8px;
-  --radius-md:    16px;
-  --radius-lg:    28px;
-  --radius-pill:  999px;
+  --nav-height: 72px;
+  --radius-sm: 8px;
+  --radius-md: 16px;
+  --radius-lg: 28px;
+  --radius-pill: 999px;
 
-  --shadow-sm: 0 2px 8px rgba(45,90,39,.10);
-  --shadow-md: 0 6px 24px rgba(45,90,39,.14);
-  --shadow-lg: 0 16px 48px rgba(45,90,39,.18);
+  --shadow-sm: 0 2px 8px rgba(45, 90, 39, .10);
+  --shadow-md: 0 6px 24px rgba(45, 90, 39, .14);
+  --shadow-lg: 0 16px 48px rgba(45, 90, 39, .18);
 
   --font-display: 'Playfair Display', Georgia, serif;
-  --font-body:    'DM Sans', 'Segoe UI', sans-serif;
+  --font-body: 'DM Sans', 'Segoe UI', sans-serif;
 
   --transition: 0.25s ease;
 }
@@ -35,7 +42,13 @@
 @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=DM+Sans:wght@300;400;500;600&display=swap');
 
 /* ── RESET / BASE ── */
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
 
 body {
   font-family: var(--font-body);
@@ -44,8 +57,15 @@ body {
   line-height: 1.6;
 }
 
-a { text-decoration: none; color: inherit; }
-img { display: block; max-width: 100%; }
+a {
+  text-decoration: none;
+  color: inherit;
+}
+
+img {
+  display: block;
+  max-width: 100%;
+}
 
 /* ── BUTTONS ── */
 .awt-btn {
@@ -68,6 +88,7 @@ img { display: block; max-width: 100%; }
   color: var(--clr-white);
   border-color: var(--clr-forest);
 }
+
 .awt-btn--solid:hover {
   background: var(--clr-green);
   border-color: var(--clr-green);
@@ -80,19 +101,21 @@ img { display: block; max-width: 100%; }
   color: var(--clr-forest);
   border-color: var(--clr-forest);
 }
+
 .awt-btn--outline:hover {
   background: var(--clr-forest);
   color: var(--clr-white);
 }
 
 .awt-btn--ghost {
-  background: rgba(255,255,255,0.15);
+  background: rgba(255, 255, 255, 0.15);
   color: var(--clr-white);
-  border-color: rgba(255,255,255,0.55);
+  border-color: rgba(255, 255, 255, 0.55);
   backdrop-filter: blur(4px);
 }
+
 .awt-btn--ghost:hover {
-  background: rgba(255,255,255,0.28);
+  background: rgba(255, 255, 255, 0.28);
 }
 
 .awt-btn--lg {
@@ -108,14 +131,19 @@ img { display: block; max-width: 100%; }
   text-align: center;
   margin-bottom: 2.5rem;
 }
-.awt-section-title--light { color: var(--clr-white); }
+
+.awt-section-title--light {
+  color: var(--clr-white);
+}
 
 /* ════════════════════════════════════════════
    NAVBAR
    ════════════════════════════════════════════ */
 .awt-nav {
   position: fixed;
-  top: 0; left: 0; right: 0;
+  top: 0;
+  left: 0;
+  right: 0;
   z-index: 1000;
   height: var(--nav-height);
   display: flex;
@@ -137,12 +165,14 @@ img { display: block; max-width: 100%; }
   gap: 10px;
   flex-shrink: 0;
 }
+
 .awt-nav__logo-img {
   width: 44px;
   height: 44px;
   object-fit: contain;
   border-radius: 6px;
 }
+
 .awt-nav__logo-text {
   font-family: var(--font-display);
   font-size: 1.1rem;
@@ -151,7 +181,7 @@ img { display: block; max-width: 100%; }
   letter-spacing: 0.02em;
 }
 
-/* Links */
+/* Links — desktop default */
 .awt-nav__links {
   display: flex;
   align-items: center;
@@ -168,33 +198,49 @@ img { display: block; max-width: 100%; }
   transition: all var(--transition);
   position: relative;
 }
+
 .awt-nav__link:hover,
 .awt-nav__link--active {
   color: var(--clr-forest);
 }
+
 .awt-nav__link--active::after {
   content: '';
   position: absolute;
-  bottom: -2px; left: 14px; right: 14px;
+  bottom: -2px;
+  left: 14px;
+  right: 14px;
   height: 2px;
   background: var(--clr-forest);
   border-radius: 2px;
 }
+
 .awt-nav__link--donate {
   background: var(--clr-forest);
   color: var(--clr-white) !important;
   font-weight: 600;
 }
+
 .awt-nav__link--donate:hover {
   background: var(--clr-green);
 }
-.awt-nav__link--donate::after { display: none; }
 
-/* Auth */
+.awt-nav__link--donate::after {
+  display: none;
+}
+
+/* Auth — desktop block (the one in the main nav row) */
 .awt-nav__auth {
   display: flex;
   gap: 8px;
   flex-shrink: 0;
+}
+
+/* The duplicate auth block rendered inside .awt-nav__links is for
+   mobile only — keep it out of the way on desktop so it never
+   doubles up the buttons. */
+.awt-nav__auth--mobile {
+  display: none;
 }
 
 /* Hamburger */
@@ -207,17 +253,30 @@ img { display: block; max-width: 100%; }
   cursor: pointer;
   padding: 4px;
   margin-left: 12px;
+  position: relative;
+  z-index: 1100;
 }
+
 .awt-nav__hamburger span {
   display: block;
-  width: 24px; height: 2px;
+  width: 24px;
+  height: 2px;
   background: var(--clr-forest);
   border-radius: 2px;
   transition: all var(--transition);
 }
-.awt-nav__hamburger.open span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
-.awt-nav__hamburger.open span:nth-child(2) { opacity: 0; }
-.awt-nav__hamburger.open span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+
+.awt-nav__hamburger.open span:nth-child(1) {
+  transform: translateY(7px) rotate(45deg);
+}
+
+.awt-nav__hamburger.open span:nth-child(2) {
+  opacity: 0;
+}
+
+.awt-nav__hamburger.open span:nth-child(3) {
+  transform: translateY(-7px) rotate(-45deg);
+}
 
 /* ════════════════════════════════════════════
    HERO
@@ -236,7 +295,6 @@ img { display: block; max-width: 100%; }
 .awt-hero__bg {
   position: absolute;
   inset: 0;
-  /* Replace with your actual banner image: */
   background: linear-gradient(145deg, var(--clr-forest) 0%, #1a3d16 55%, #0f2a0c 100%);
 }
 
@@ -244,8 +302,8 @@ img { display: block; max-width: 100%; }
   position: absolute;
   inset: 0;
   background:
-    radial-gradient(ellipse 60% 50% at 70% 40%, rgba(61,122,53,.35) 0%, transparent 70%),
-    linear-gradient(to bottom, rgba(15,42,12,.0) 60%, rgba(15,42,12,.8) 100%);
+    radial-gradient(ellipse 60% 50% at 70% 40%, rgba(61, 122, 53, .35) 0%, transparent 70%),
+    linear-gradient(to bottom, rgba(15, 42, 12, .0) 60%, rgba(15, 42, 12, .8) 100%);
 }
 
 .awt-hero__circle {
@@ -254,13 +312,19 @@ img { display: block; max-width: 100%; }
   opacity: 0.08;
   background: var(--clr-white);
 }
+
 .awt-hero__circle--1 {
-  width: 600px; height: 600px;
-  top: -200px; right: -150px;
+  width: 600px;
+  height: 600px;
+  top: -200px;
+  right: -150px;
 }
+
 .awt-hero__circle--2 {
-  width: 300px; height: 300px;
-  bottom: 60px; left: -80px;
+  width: 300px;
+  height: 300px;
+  bottom: 60px;
+  left: -80px;
 }
 
 .awt-hero__content {
@@ -272,8 +336,8 @@ img { display: block; max-width: 100%; }
 
 .awt-hero__eyebrow {
   display: inline-block;
-  background: rgba(255,255,255,0.12);
-  border: 1px solid rgba(255,255,255,0.25);
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.25);
   color: var(--clr-sage);
   font-size: 2.4rem;
   font-weight: 600;
@@ -294,13 +358,14 @@ img { display: block; max-width: 100%; }
   margin-bottom: 1.25rem;
   animation: fadeUp 0.7s 0.1s ease both;
 }
+
 .awt-hero__title--accent {
   color: var(--clr-sage);
 }
 
 .awt-hero__sub {
   font-size: 1.05rem;
-  color: rgba(255,255,255,0.75);
+  color: rgba(255, 255, 255, 0.75);
   max-width: 540px;
   margin: 0 auto 2rem;
   animation: fadeUp 0.7s 0.2s ease both;
@@ -327,14 +392,15 @@ img { display: block; max-width: 100%; }
 }
 
 .awt-stat-pill {
-  background: rgba(255,255,255,0.1);
-  border: 1px solid rgba(255,255,255,0.2);
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
   backdrop-filter: blur(8px);
   border-radius: var(--radius-md);
   padding: 16px 28px;
   text-align: center;
   min-width: 130px;
 }
+
 .awt-stat-pill__value {
   display: block;
   font-family: var(--font-display);
@@ -342,6 +408,7 @@ img { display: block; max-width: 100%; }
   color: var(--clr-white);
   font-weight: 700;
 }
+
 .awt-stat-pill__label {
   font-size: 0.78rem;
   color: var(--clr-sage);
@@ -375,22 +442,28 @@ img { display: block; max-width: 100%; }
   transition: transform var(--transition), box-shadow var(--transition);
   cursor: default;
 }
+
 .awt-serve__card:hover {
   transform: translateY(-6px);
   box-shadow: var(--shadow-md);
 }
 
 .awt-serve__icon-wrap {
-  width: 64px; height: 64px;
+  width: 64px;
+  height: 64px;
   border: 2px solid var(--clr-forest);
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   margin: 0 auto 14px;
-  background: rgba(200,217,195,0.3);
+  background: rgba(200, 217, 195, 0.3);
 }
-.awt-serve__icon { font-size: 1.6rem; }
+
+.awt-serve__icon {
+  font-size: 1.6rem;
+}
+
 .awt-serve__label {
   font-weight: 600;
   font-size: 0.9rem;
@@ -420,6 +493,7 @@ img { display: block; max-width: 100%; }
   border: 1.5px solid var(--clr-border);
   transition: all var(--transition);
 }
+
 .awt-help__card:hover {
   border-color: var(--clr-forest);
   box-shadow: var(--shadow-md);
@@ -427,7 +501,8 @@ img { display: block; max-width: 100%; }
 }
 
 .awt-help__icon-circle {
-  width: 72px; height: 72px;
+  width: 72px;
+  height: 72px;
   border: 2.5px solid var(--clr-forest);
   border-radius: 50%;
   display: flex;
@@ -436,7 +511,11 @@ img { display: block; max-width: 100%; }
   margin: 0 auto 18px;
   background: var(--clr-cream);
 }
-.awt-help__icon { font-size: 1.8rem; }
+
+.awt-help__icon {
+  font-size: 1.8rem;
+}
+
 .awt-help__card-title {
   font-weight: 700;
   font-size: 0.9rem;
@@ -445,6 +524,7 @@ img { display: block; max-width: 100%; }
   color: var(--clr-forest);
   margin-bottom: 10px;
 }
+
 .awt-help__card-desc {
   font-size: 0.88rem;
   color: var(--clr-muted);
@@ -474,6 +554,7 @@ img { display: block; max-width: 100%; }
   color: var(--clr-dark);
   margin-bottom: 12px;
 }
+
 .awt-donation__sub {
   color: var(--clr-muted);
   font-size: 1rem;
@@ -500,8 +581,9 @@ img { display: block; max-width: 100%; }
   padding: 80px clamp(20px, 8vw, 100px);
   text-align: center;
 }
+
 .awt-contact-teaser__sub {
-  color: rgba(255,255,255,0.75);
+  color: rgba(255, 255, 255, 0.75);
   margin-bottom: 2rem;
   font-size: 1rem;
 }
@@ -513,6 +595,7 @@ img { display: block; max-width: 100%; }
   background: var(--clr-dark);
   padding: 28px clamp(20px, 8vw, 100px);
 }
+
 .awt-footer__inner {
   max-width: 1100px;
   margin: 0 auto;
@@ -522,23 +605,28 @@ img { display: block; max-width: 100%; }
   gap: 16px;
   flex-wrap: wrap;
 }
+
 .awt-footer__brand {
   display: flex;
   align-items: center;
   gap: 10px;
 }
+
 .awt-footer__logo {
-  width: 36px; height: 36px;
+  width: 36px;
+  height: 36px;
   object-fit: contain;
   opacity: 0.85;
 }
+
 .awt-footer__name {
   font-family: var(--font-display);
   color: var(--clr-sage);
   font-size: 1rem;
 }
+
 .awt-footer__copy {
-  color: rgba(255,255,255,0.4);
+  color: rgba(255, 255, 255, 0.4);
   font-size: 0.8rem;
 }
 
@@ -546,42 +634,103 @@ img { display: block; max-width: 100%; }
    ANIMATIONS
    ════════════════════════════════════════════ */
 @keyframes fadeUp {
-  from { opacity: 0; transform: translateY(20px); }
-  to   { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* ════════════════════════════════════════════
    RESPONSIVE
    ════════════════════════════════════════════ */
 @media (max-width: 900px) {
+
+  /* ── Mobile nav links panel ──
+     Uses max-height + opacity + visibility instead of display:none
+     so the open/close can animate smoothly. display:none cannot
+     be transitioned — it just snaps. */
   .awt-nav__links {
-    display: none;
+    /* layout */
     position: fixed;
     top: var(--nav-height);
-    left: 0; right: 0;
+    left: 0;
+    right: 0;
     background: var(--clr-white);
     border-bottom: 1px solid var(--clr-border);
     flex-direction: column;
-    padding: 16px 24px 24px;
     gap: 14px;
     box-shadow: var(--shadow-md);
+    overflow-y: auto;
+    z-index: 1050;
+
+    /* closed state */
+    max-height: 0;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    padding: 0 24px;
+
+    /* smooth open / close */
+    transition:
+      max-height 0.3s ease,
+      opacity 0.25s ease,
+      visibility 0.3s,
+      padding 0.3s ease;
   }
-  .awt-nav__links--open { display: flex; }
-  .awt-nav__link--active::after { display: none; }
-  .awt-nav__hamburger { display: flex; }
-  .awt-nav__auth .awt-btn { padding: 7px 14px; font-size: 0.82rem; }
 
-  .awt-donation__inner { grid-template-columns: 1fr; }
+  /* open state — toggled by React adding this class */
+  .awt-nav__links--open {
+    max-height: calc(100vh - var(--nav-height));
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    padding: 16px 24px 24px;
+  }
+
+  .awt-nav__link--active::after {
+    display: none;
+  }
+
+  .awt-nav__hamburger {
+    display: flex;
+  }
+
+  /* Hide the desktop auth block entirely on mobile — the mobile
+     copy inside .awt-nav__links is the only one shown. */
+  .awt-nav__auth--desktop {
+    display: none;
+  }
+
+  /* Reveal + style the mobile auth block that lives inside the
+     dropdown panel. */
+  .awt-nav__auth--mobile {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    width: 100%;
+    margin-top: 8px;
+    padding-top: 16px;
+    border-top: 1px solid var(--clr-border);
+  }
+
+  .awt-nav__auth--mobile .awt-btn {
+    width: 100%;
+    justify-content: center;
+    padding: 10px 20px;
+  }
+
+  .awt-nav__welcome {
+    text-align: center;
+    padding: 8px 0;
+  }
 }
 
-@media (max-width: 600px) {
-  .awt-hero { padding-top: calc(var(--nav-height) + 40px); }
-  .awt-hero__stats { gap: 10px; }
-  .awt-stat-pill { padding: 12px 18px; min-width: 100px; }
-  .awt-serve__grid { grid-template-columns: repeat(3, 1fr); }
-  .awt-footer__inner { flex-direction: column; text-align: center; }
-}
-/* ── Append to HomePage.css ── */
+/* ── Misc nav element styling ── */
 
 .awt-nav__welcome {
   padding-top: 10px;
@@ -621,4 +770,11 @@ img { display: block; max-width: 100%; }
   max-width: 900px;
   margin: 32px auto 0;
   padding: 0 24px;
+}
+
+@media (max-width: 700px) {
+  .awt-donation__inner {
+    grid-template-columns: 1fr;
+    text-align: center;
+  }
 }

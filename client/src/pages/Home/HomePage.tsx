@@ -27,12 +27,52 @@ const HomePage: React.FC = () => {
     }
   }, []);
 
+  // Track scroll for navbar shadow
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 8);
+    window.addEventListener("scroll", onScroll);
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  // Close the mobile menu automatically if the viewport grows back to desktop size
+  useEffect(() => {
+    const onResize = () => {
+      if (window.innerWidth > 900) setMenuOpen(false);
+    };
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
+
   const handleLogout = () => {
     sessionStorage.removeItem("token");
     sessionStorage.removeItem("user");
     setUserName(null);
+    setMenuOpen(false);
     navigate("/");
   };
+
+  // Reusable auth block so the desktop and mobile menu always render
+  // identical markup — no duplicated/conflicting CSS needed to hide one.
+  const AuthButtons = () =>
+    userName ? (
+      <>
+        <span className="awt-nav__welcome">
+          Welcome, <strong>{userName}</strong>
+        </span>
+        <button className="awt-btn awt-btn--outline" onClick={handleLogout}>
+          Log Out
+        </button>
+      </>
+    ) : (
+      <>
+        <Link to="/signin" className="awt-btn awt-btn--outline" onClick={() => setMenuOpen(false)}>
+          Sign In
+        </Link>
+        <Link to="/signup" className="awt-btn awt-btn--solid" onClick={() => setMenuOpen(false)}>
+          Sign Up
+        </Link>
+      </>
+    );
 
   return (
     <div className="awt-root">
@@ -45,37 +85,32 @@ const HomePage: React.FC = () => {
         </Link>
 
         <nav className={`awt-nav__links ${menuOpen ? "awt-nav__links--open" : ""}`}>
-          <Link to="/" className="awt-nav__link awt-nav__link--active">Home</Link>
-          <Link to="/about" className="awt-nav__link">About</Link>
-          <Link to="/contact" className="awt-nav__link">Contact Us</Link>
+          <Link to="/" className="awt-nav__link awt-nav__link--active" onClick={() => setMenuOpen(false)}>Home</Link>
+          <Link to="/about" className="awt-nav__link" onClick={() => setMenuOpen(false)}>About</Link>
+          <Link to="/contact" className="awt-nav__link" onClick={() => setMenuOpen(false)}>Contact Us</Link>
           {userRole === "admin" && (
-            <Link to="/admin" className="awt-nav__link awt-nav__link--admin">Admin Control</Link>
+            <Link to="/admin" className="awt-nav__link awt-nav__link--admin" onClick={() => setMenuOpen(false)}>Admin Control</Link>
           )}
-          <Link to="/create-donation" className="awt-nav__link awt-nav__link--donate">Donate Now</Link>
+          <Link to="/create-donation" className="awt-nav__link awt-nav__link--donate" onClick={() => setMenuOpen(false)}>Donate Now</Link>
+
+          {/* Auth buttons rendered here too — only visible on mobile (via CSS)
+              when the menu panel is open. This is the ONLY place auth
+              buttons live on small screens. */}
+          <div className="awt-nav__auth awt-nav__auth--mobile">
+            <AuthButtons />
+          </div>
         </nav>
 
-        <div className="awt-nav__auth">
-          {userName ? (
-            <>
-              <span className="awt-nav__welcome">
-                Welcome, <strong>{userName}</strong>
-              </span>
-              <button className="awt-btn awt-btn--outline" onClick={handleLogout}>
-                Log Out
-              </button>
-            </>
-          ) : (
-            <>
-              <Link to="/signin" className="awt-btn awt-btn--outline">Sign In</Link>
-              <Link to="/signup" className="awt-btn awt-btn--solid">Sign Up</Link>
-            </>
-          )}
+        {/* Desktop-only auth buttons. Hidden on mobile via CSS. */}
+        <div className="awt-nav__auth awt-nav__auth--desktop">
+          <AuthButtons />
         </div>
 
         <button
           className={`awt-nav__hamburger ${menuOpen ? "open" : ""}`}
-          onClick={() => setMenuOpen(!menuOpen)}
+          onClick={() => setMenuOpen((prev) => !prev)}
           aria-label="Toggle menu"
+          aria-expanded={menuOpen}
         >
           <span /><span /><span />
         </button>

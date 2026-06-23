@@ -148,8 +148,6 @@ export default function Register({ onNavigateToLogin }: RegisterProps) {
           <div className="auth-divider__line" />
         </div>
 
-        <SocialButtons />
-
         <p className="auth-footer">
           Already have an account?{" "}
           <button className="auth-footer__link" onClick={goToLogin} type="button">
