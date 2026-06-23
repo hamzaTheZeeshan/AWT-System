@@ -276,7 +276,7 @@ export const getTotalDonations = async (req, res) => {
       FROM Donation_Type dt
       LEFT JOIN Donation d
         ON d.donation_type_id = dt.donation_type_id
-        AND d.status = 'Approved'
+        AND d.status = 'approved'
         AND d.amount IS NOT NULL
       GROUP BY dt.donation_type_id, dt.type_name
       HAVING COALESCE(SUM(d.amount), 0) > 0
@@ -290,13 +290,13 @@ export const getTotalDonations = async (req, res) => {
           SELECT SUM(c.quantity)
           FROM Clothes c
           JOIN Donation d ON c.donation_id = d.donation_id
-          WHERE d.status = 'Approved'
+          WHERE d.status = 'approved'
         ), 0) AS total_clothes_items,
         COALESCE((
           SELECT SUM(b.quantity)
           FROM Books b
           JOIN Donation d ON b.donation_id = d.donation_id
-          WHERE d.status = 'Approved'
+          WHERE d.status = 'approved'
         ), 0) AS total_books_items
     `);
 
@@ -304,7 +304,7 @@ export const getTotalDonations = async (req, res) => {
     const campaignTotals = await db.query(`
       SELECT COALESCE(SUM(amount), 0) AS total_campaign_amount
       FROM Donation
-      WHERE status = 'Approved'
+      WHERE status = 'approved'
         AND campaign_id IS NOT NULL
         AND amount IS NOT NULL
     `);
@@ -313,7 +313,7 @@ export const getTotalDonations = async (req, res) => {
     const orphanageTotals = await db.query(`
       SELECT COALESCE(SUM(amount), 0) AS total_orphanage_amount
       FROM Donation
-      WHERE status = 'Approved'
+      WHERE status = 'approved'
         AND orphanage_id IS NOT NULL
         AND amount IS NOT NULL
     `);
