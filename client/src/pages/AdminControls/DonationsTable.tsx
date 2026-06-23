@@ -21,7 +21,7 @@ interface Donation {
 
 type FilterType = "all" | "pending" | "approved" | "rejected";
 
-const BASE_URL = "http://localhost:5000/api/admin";
+const BASE_URL = "https://legal-impart-demise.ngrok-free.dev/api/admin";
 
 const DonationsTable: React.FC = () => {
   const [donations, setDonations] = useState<Donation[]>([]);

@@ -13,7 +13,7 @@ interface Orphanage {
   contact_info: string;
 }
 
-const BASE_URL = "http://localhost:5000/api";
+const BASE_URL = "https://legal-impart-demise.ngrok-free.dev/api";
 
 const OrphanagesList: React.FC = () => {
   const [orphanages, setOrphanages] = useState<Orphanage[]>([]);

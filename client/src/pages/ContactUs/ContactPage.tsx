@@ -16,7 +16,7 @@ const ContactPage: React.FC = () => {
   if (!form.name || !form.email || !form.message) return;
 
   try {
-    const response = await fetch("http://localhost:5000/api/contact", {
+    const response = await fetch("https://legal-impart-demise.ngrok-free.dev/api/contact", {
       method: "POST",
       headers: {
         "Content-Type": "application/json"

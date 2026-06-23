@@ -11,7 +11,7 @@ interface User {
   role: string;
 }
 
-const BASE_URL = "http://localhost:5000/api/admin";
+const BASE_URL = "https://legal-impart-demise.ngrok-free.dev/api/admin";
 
 const UsersTable: React.FC = () => {
   const [users, setUsers] = useState<User[]>([]);

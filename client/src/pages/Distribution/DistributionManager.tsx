@@ -188,7 +188,8 @@ export default function DistributionManager() {
     setError(null);
     try {
       const token = sessionStorage.getItem('token');
-      const res = await fetch('http://localhost:5000/api/admin/distributions', {
+
+      const res = await fetch('https://legal-impart-demise.ngrok-free.dev/api/admin/distributions', {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',

@@ -21,7 +21,7 @@ interface DonateFormData {
   amount: string;
 }
 
-const BASE_URL = "http://localhost:5000/api";
+const BASE_URL = "https://legal-impart-demise.ngrok-free.dev/api";
 
 const MONEY_TYPE_ID = 1; // Money donation_type_id from your Donation_Type table
 
