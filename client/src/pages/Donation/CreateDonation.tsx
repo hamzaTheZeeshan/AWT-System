@@ -83,8 +83,8 @@ const CLOTH_TYPES = ["Shirt", "Pants", "Jacket", "Dress", "Shoes", "Other"];
 const CONDITION_OPTIONS = ["New", "Good", "Fair", "Worn"];
 
 const DONATION_TYPE_LABELS: Record<number, string> = {
-    1: "Zakat",
-    2: "Normal Donation",
+    1: "Normal",
+    2: "Zakat",
     3: "Sadqah",
     4: "Clothes",
     5: "Books",
