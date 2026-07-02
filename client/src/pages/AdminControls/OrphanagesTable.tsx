@@ -24,7 +24,7 @@ const EMPTY_FORM: OrphanageFormData = {
   contact_info: "",
 };
 
-const BASE_URL = "https://legal-impart-demise.ngrok-free.dev/api/admin";
+const BASE_URL = "https://awt-system.vercel.app/api/admin";
 
 const OrphanagesTable: React.FC = () => {
   const [orphanages, setOrphanages] = useState<Orphanage[]>([]);

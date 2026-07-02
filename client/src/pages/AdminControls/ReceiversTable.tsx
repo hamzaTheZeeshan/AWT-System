@@ -40,7 +40,7 @@ interface DistributableDonation {
 
 type FilterType = "all" | "orphanage" | "general";
 
-const BASE_URL = "https://legal-impart-demise.ngrok-free.dev/api/admin";
+const BASE_URL = "https://awt-system.vercel.app/api/admin";
 
 const MONEY_TYPES = ["Money", "Zakat", "Sadqah"];
 

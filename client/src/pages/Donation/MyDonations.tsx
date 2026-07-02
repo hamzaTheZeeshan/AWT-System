@@ -51,7 +51,7 @@ const MyDonations: React.FC = () => {
       try {
         setLoading(true);
         const token = sessionStorage.getItem("token");
-        const res = await fetch("https://legal-impart-demise.ngrok-free.dev/api/donations/my-donations", {
+        const res = await fetch("https://awt-system.vercel.app/api/donations/my-donations", {
           headers: {
             Authorization: `Bearer ${token}`,
           },

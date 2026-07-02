@@ -19,17 +19,6 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-app.use((req, res, next) => {
-  console.log(`CORS middleware triggered for ${req.method} ${req.url}`);
-  res.header("Access-Control-Allow-Origin", "*");
-  res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
-  res.header("Access-Control-Allow-Headers", "Content-Type, Authorization");
-  if (req.method === "OPTIONS") {
-    return res.sendStatus(200);
-  }
-  next();
-});
-
 app.get("/", (req, res) => {
   res.send("AWT Backend API is running");
 });
@@ -46,7 +35,15 @@ app.use("/api/orphanages", orphanageRoutes);
 app.use("/api/contact", contactRoutes);
 app.use("/api/interns", internRoutes);
 
-const PORT = 5000;
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
+// Only bind a port when running locally (e.g. `node app.js`).
+// On Vercel, this file is imported and wrapped as a Vercel Function instead —
+// app.listen() never runs there because process.env.VERCEL is set to "1".
+if (!process.env.VERCEL) {
+  const PORT = process.env.PORT || 5000;
+  app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+  });
+}
+
+// Required so Vercel can pick up and serve this Express app.
+export default app;

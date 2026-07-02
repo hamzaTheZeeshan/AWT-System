@@ -52,7 +52,7 @@ export default function InternshipPage() {
         setAppsLoading(true);
         setAppsError(null);
         const token = sessionStorage.getItem("token");
-        const res = await fetch("https://legal-impart-demise.ngrok-free.dev/api/interns/my-applications", {
+        const res = await fetch("https://awt-system.vercel.app/api/interns/my-applications", {
           headers: {
             Authorization: `Bearer ${token}`,
           },
@@ -82,7 +82,7 @@ export default function InternshipPage() {
     setFeedback(null);
     try {
       const token = sessionStorage.getItem("token");
-      const res = await fetch("https://legal-impart-demise.ngrok-free.dev/api/interns/apply", {
+      const res = await fetch("https://awt-system.vercel.app/api/interns/apply", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

@@ -19,7 +19,7 @@ interface InternForm {
   user_id: string;
 }
 
-const BASE_URL = "https://legal-impart-demise.ngrok-free.dev/api";
+const BASE_URL = "https://awt-system.vercel.app/api";
 const EMPTY_FORM: InternForm = { name: "", role: "", assigned_task: "", end_date: "", user_id: "" };
 
 const getToken = () => sessionStorage.getItem("token");

@@ -189,7 +189,7 @@ export default function DistributionManager() {
     try {
       const token = sessionStorage.getItem('token');
 
-      const res = await fetch('https://legal-impart-demise.ngrok-free.dev/api/admin/distributions', {
+      const res = await fetch('https://awt-system.vercel.app/api/admin/distributions', {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',

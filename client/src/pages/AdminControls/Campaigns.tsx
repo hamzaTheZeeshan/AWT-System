@@ -21,7 +21,7 @@ interface CampaignFormData {
   end_date: string;
 }
 
-const BASE_URL = "https://legal-impart-demise.ngrok-free.dev/api/admin";
+const BASE_URL = "https://awt-system.vercel.app/api/admin";
 
 const EMPTY_FORM: CampaignFormData = {
   title: "",

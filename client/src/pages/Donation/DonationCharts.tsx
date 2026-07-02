@@ -94,7 +94,7 @@ const DonationCharts: React.FC = () => {
       try {
         setLoading(true);
         const token = sessionStorage.getItem("token");
-        const res = await fetch("https://legal-impart-demise.ngrok-free.dev/api/donations/total", {
+        const res = await fetch("https://awt-system.vercel.app/api/donations/total", {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (!res.ok) throw new Error("Failed to fetch totals");

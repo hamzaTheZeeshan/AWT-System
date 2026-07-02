@@ -41,7 +41,7 @@ export default function Register({ onNavigateToLogin }: RegisterProps) {
     setMessage("");
 
     try {
-      const res = await fetch("https://legal-impart-demise.ngrok-free.dev/api/auth/register", {
+      const res = await fetch("https://awt-system.vercel.app/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(form),

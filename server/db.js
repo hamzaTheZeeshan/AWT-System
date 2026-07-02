@@ -10,15 +10,19 @@ const db = new Pool({
   ssl: {
     rejectUnauthorized: false,
   },
+  // Serverless-friendly sizing: each function instance gets its own pool,
+  // and your Postgres provider has a max connection limit, so keep this low.
+  max: 5,
+  idleTimeoutMillis: 30000,
 });
 
 db.connect()
-  .then(() => {
+  .then((client) => {
     console.log("PostgreSQL connected");
-    console.log("DATABASE_URL =", process.env.DATABASE_URL);
+    client.release(); // return the client to the pool instead of leaking it
   })
   .catch((err) => {
-    console.log("DB connection failed", err);
+    console.error("DB connection failed:", err.message);
   });
 
 export default db;

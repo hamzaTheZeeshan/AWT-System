@@ -31,7 +31,7 @@ export default function Login({ onNavigateToRegister }: LoginProps) {
 
     try {
 
-      const res = await fetch("https://legal-impart-demise.ngrok-free.dev/api/auth/login", {
+      const res = await fetch("https://awt-system.vercel.app/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
