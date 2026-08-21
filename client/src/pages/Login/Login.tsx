@@ -68,7 +68,7 @@ export default function Login({ onNavigateToRegister }: LoginProps) {
         </div>
 
         <h1 className="auth-heading">
-          Welcome back<br />Sign in to continue
+          Welcome<br />Sign in to continue
         </h1>
 
         <form onSubmit={handleLogin} style={{ width: "100%" }}>
